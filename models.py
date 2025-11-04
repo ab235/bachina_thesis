@@ -7,7 +7,6 @@ class Document(Base):
     __tablename__ = "documents"
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(Text, nullable=False)
-
     chunks = relationship("Chunk", back_populates="document", cascade="all, delete-orphan")
 
 class Chunk(Base):
@@ -16,13 +15,11 @@ class Chunk(Base):
     document_id: Mapped[int] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"), index=True)
     ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    embedding = mapped_column(Vector(3072))
-
+    embedding = mapped_column(Vector(1536))
     document = relationship("Document", back_populates="chunks")
-
     __table_args__ = (
-        UniqueConstraint("document_id", "ordinal", name="uq_doc_ord"),
-    )
+        UniqueConstraint("document_id", "ordinal", name="uq_doc_ord"), 
+    )#unique chunks
 
 def create_all():
     Base.metadata.create_all(bind=engine)
