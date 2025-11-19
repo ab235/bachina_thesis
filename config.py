@@ -9,6 +9,8 @@ OPENAI_EMBED_MODEL = os.getenv("OPENAI_EMBED_MODEL", "text-embedding-3-small")
 
 OPENAI_CHAT_MODEL = os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini")
 
+OPENAI_GRADER_MODEL = os.getenv("OPENAI_GRADER_MODEL", OPENAI_CHAT_MODEL)
+
 PGHOST = os.getenv("PGHOST", "localhost")
 
 PGPORT = int(os.getenv("PGPORT", "5432"))

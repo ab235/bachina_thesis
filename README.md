@@ -129,3 +129,26 @@ The system will:
 2. Find the 6 most similar chunks from the database
 3. Use GPT to generate an answer based on those chunks
 4. Return the answer with chunk citations
+
+### Step 3: Run Reliability Checks
+
+50 handbook-derived question/answer pairs live in `tests/ground_truth.py`. Use them to regression-test the RAG pipeline:
+
+```bash
+python tests/reliability.py --shuffle --limit 10
+```
+
+Key options:
+
+- `--questions sbr-001 sbr-010`: run specific IDs from the ground truth list.
+- `--shuffle --seed 42 --limit 25`: randomize order with a reproducible seed and cap the run length.
+- `--responses cache.json`: reuse a JSON file with prior model answers instead of calling OpenAI.
+- `--save-responses latest.json`: write the collected answers (with timestamps) for later offline grading.
+- `--dry-run`: view the selected prompts without issuing API calls.
+
+Each run prints per-question scores (based on required keywords) plus an aggregate pass rate so you can compare revisions objectively.
+
+
+
+source .venv/bin/activate
+sudo service postgresql start
