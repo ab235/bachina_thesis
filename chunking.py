@@ -1,5 +1,6 @@
 from typing import List
 import nltk
+nltk.download('punkt_tab')
 from tqdm import tqdm
 import numpy as np
 
