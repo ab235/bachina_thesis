@@ -4,3 +4,11 @@ psycopg2-binary>=2.9.9
 SQLAlchemy>=2.0.30
 pgvector>=0.2.5
 tqdm>=4.66.4
+beautifulsoup4>=4.12.3
+langchain>=0.2.12
+langchain-community>=0.2.10
+langchain-openai>=0.1.21
+langchain-text-splitters>=0.2.2
+langgraph>=0.2.2
+pydantic>=2.7.4
+nltk

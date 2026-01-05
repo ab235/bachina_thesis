@@ -5,7 +5,7 @@ from tqdm import tqdm  # Progress bar library for visual feedback
 from config import CHUNK_SIZE, CHUNK_OVERLAP
 from db import SessionLocal, ensure_db
 from models import create_all, Document, Chunk
-from chunking import simple_chunk
+from chunking import simple_chunk, semantic_chunking
 from embeddings import embed_texts
 
 def main():
@@ -35,7 +35,7 @@ def main():
         raw = f.read()
 
     print(f"Chunking text (chunk_size={CHUNK_SIZE}, overlap={CHUNK_OVERLAP})...")
-    chunks = simple_chunk(raw, max_chars=CHUNK_SIZE, overlap=CHUNK_OVERLAP)
+    chunks = semantic_chunking(raw, max_chars=CHUNK_SIZE, overlap=CHUNK_OVERLAP)
     
     if not chunks:
         raise RuntimeError("No chunky.")
