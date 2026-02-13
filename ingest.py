@@ -35,7 +35,7 @@ def main():
         raw = f.read()
 
     print(f"Chunking text (chunk_size={CHUNK_SIZE}, overlap={CHUNK_OVERLAP})...")
-    chunks = semantic_chunking(raw, max_chars=CHUNK_SIZE, overlap=CHUNK_OVERLAP)
+    chunks = simple_chunk(raw, max_chars=CHUNK_SIZE, overlap=CHUNK_OVERLAP)
     
     if not chunks:
         raise RuntimeError("No chunky.")

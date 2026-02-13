@@ -12,3 +12,9 @@ langchain-text-splitters>=0.2.2
 langgraph>=0.2.2
 pydantic>=2.7.4
 nltk
+beir
+sentence-transformers
+ragas==0.4.3
+datasets
+faiss-cpu
+elasticsearch

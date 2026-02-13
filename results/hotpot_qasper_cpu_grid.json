@@ -1,0 +1,250 @@
+{
+  "config": {
+    "datasets": [
+      "hotpotqa_distractor"
+    ],
+    "hotpot_distractor_file": "datasets/hotpot_dev_distractor_v1.json",
+    "qasper_split": "test",
+    "data_dir": "datasets",
+    "max_queries": 200,
+    "max_corpus_docs": 8000,
+    "seed": 42,
+    "batch_size": 32,
+    "sbert_model": "sentence-transformers/msmarco-MiniLM-L6-v3",
+    "token_size": 200,
+    "max_chars": 1200,
+    "overlap": 100,
+    "min_chars": 200,
+    "similarity_threshold": 0.8,
+    "k_values": [
+      1,
+      3,
+      5,
+      10
+    ],
+    "chunkers": [
+      "token",
+      "sentence",
+      "recursive",
+      "semantic"
+    ],
+    "retrievers": [
+      "sbert",
+      "bm25"
+    ],
+    "output": "results/hotpot_qasper_cpu_grid.json",
+    "backend": "sbert",
+    "model": "",
+    "normalize": true
+  },
+  "results": [
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunker": "token",
+      "retriever": "sbert",
+      "num_queries": 200,
+      "num_docs": 1994,
+      "num_chunks": 2160,
+      "recall": {
+        "Recall@1": 0.4075,
+        "Recall@3": 0.605,
+        "Recall@5": 0.6725,
+        "Recall@10": 0.7425
+      },
+      "mrr": {
+        "MRR@1": 0.815,
+        "MRR@3": 0.86,
+        "MRR@5": 0.8689999999999998,
+        "MRR@10": 0.8719761904761905
+      },
+      "ndcg": {
+        "NDCG@1": 0.815,
+        "NDCG@3": 0.6420855235507559,
+        "NDCG@5": 0.6762568475588749,
+        "NDCG@10": 0.7047108218410603
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunker": "token",
+      "retriever": "bm25",
+      "num_queries": 200,
+      "num_docs": 1994,
+      "num_chunks": 2160,
+      "recall": {
+        "Recall@1": 0.3875,
+        "Recall@3": 0.6375,
+        "Recall@5": 0.7375,
+        "Recall@10": 0.8775
+      },
+      "mrr": {
+        "MRR@1": 0.775,
+        "MRR@3": 0.8383333333333333,
+        "MRR@5": 0.8488333333333334,
+        "MRR@10": 0.8541646825396826
+      },
+      "ndcg": {
+        "NDCG@1": 0.775,
+        "NDCG@3": 0.6565735963827283,
+        "NDCG@5": 0.7075062922110164,
+        "NDCG@10": 0.7626433797705876
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunker": "sentence",
+      "retriever": "sbert",
+      "num_queries": 200,
+      "num_docs": 1994,
+      "num_chunks": 8394,
+      "recall": {
+        "Recall@1": 0.4,
+        "Recall@3": 0.6325,
+        "Recall@5": 0.7,
+        "Recall@10": 0.78
+      },
+      "mrr": {
+        "MRR@1": 0.8,
+        "MRR@3": 0.8625,
+        "MRR@5": 0.8672500000000001,
+        "MRR@10": 0.870811507936508
+      },
+      "ndcg": {
+        "NDCG@1": 0.8,
+        "NDCG@3": 0.6595666161114333,
+        "NDCG@5": 0.6942753483156181,
+        "NDCG@10": 0.7258707684799246
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunker": "sentence",
+      "retriever": "bm25",
+      "num_queries": 200,
+      "num_docs": 1994,
+      "num_chunks": 8394,
+      "recall": {
+        "Recall@1": 0.385,
+        "Recall@3": 0.635,
+        "Recall@5": 0.7275,
+        "Recall@10": 0.875
+      },
+      "mrr": {
+        "MRR@1": 0.77,
+        "MRR@3": 0.8283333333333335,
+        "MRR@5": 0.8373333333333334,
+        "MRR@10": 0.8450317460317461
+      },
+      "ndcg": {
+        "NDCG@1": 0.77,
+        "NDCG@3": 0.651902276201865,
+        "NDCG@5": 0.6982021899464819,
+        "NDCG@10": 0.7569124895704595
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunker": "recursive",
+      "retriever": "sbert",
+      "num_queries": 200,
+      "num_docs": 1994,
+      "num_chunks": 2086,
+      "recall": {
+        "Recall@1": 0.4125,
+        "Recall@3": 0.61,
+        "Recall@5": 0.6725,
+        "Recall@10": 0.7525
+      },
+      "mrr": {
+        "MRR@1": 0.825,
+        "MRR@3": 0.8708333333333332,
+        "MRR@5": 0.8788333333333332,
+        "MRR@10": 0.8808809523809522
+      },
+      "ndcg": {
+        "NDCG@1": 0.825,
+        "NDCG@3": 0.6482169954784106,
+        "NDCG@5": 0.6800163423588367,
+        "NDCG@10": 0.7122757230967294
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunker": "recursive",
+      "retriever": "bm25",
+      "num_queries": 200,
+      "num_docs": 1994,
+      "num_chunks": 2086,
+      "recall": {
+        "Recall@1": 0.385,
+        "Recall@3": 0.63,
+        "Recall@5": 0.735,
+        "Recall@10": 0.8775
+      },
+      "mrr": {
+        "MRR@1": 0.77,
+        "MRR@3": 0.8366666666666667,
+        "MRR@5": 0.8471666666666667,
+        "MRR@10": 0.8526369047619048
+      },
+      "ndcg": {
+        "NDCG@1": 0.77,
+        "NDCG@3": 0.651244916563592,
+        "NDCG@5": 0.7048182936176057,
+        "NDCG@10": 0.7612454853693571
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunker": "semantic",
+      "retriever": "sbert",
+      "num_queries": 200,
+      "num_docs": 1994,
+      "num_chunks": 8321,
+      "recall": {
+        "Recall@1": 0.41,
+        "Recall@3": 0.6225,
+        "Recall@5": 0.685,
+        "Recall@10": 0.76
+      },
+      "mrr": {
+        "MRR@1": 0.82,
+        "MRR@3": 0.8675000000000002,
+        "MRR@5": 0.8730000000000001,
+        "MRR@10": 0.8760952380952383
+      },
+      "ndcg": {
+        "NDCG@1": 0.82,
+        "NDCG@3": 0.655151259514583,
+        "NDCG@5": 0.6866819022969761,
+        "NDCG@10": 0.7173124611576118
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunker": "semantic",
+      "retriever": "bm25",
+      "num_queries": 200,
+      "num_docs": 1994,
+      "num_chunks": 8321,
+      "recall": {
+        "Recall@1": 0.395,
+        "Recall@3": 0.6625,
+        "Recall@5": 0.755,
+        "Recall@10": 0.8925
+      },
+      "mrr": {
+        "MRR@1": 0.79,
+        "MRR@3": 0.8541666666666669,
+        "MRR@5": 0.8604166666666667,
+        "MRR@10": 0.8644781746031747
+      },
+      "ndcg": {
+        "NDCG@1": 0.79,
+        "NDCG@3": 0.676902276201865,
+        "NDCG@5": 0.7225304297013995,
+        "NDCG@10": 0.7772747476358053
+      }
+    }
+  ]
+}

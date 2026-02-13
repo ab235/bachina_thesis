@@ -1,14 +1,15 @@
 import time
-from typing import List
+from typing import List, Optional
 from openai import OpenAI
 from config import OPENAI_API_KEY, OPENAI_EMBED_MODEL
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
-def embed_texts(texts: List[str]) -> List[List[float]]:
+def embed_texts(texts: List[str], model_name: Optional[str] = None) -> List[List[float]]:
     for attempt in range(5):
         try:
-            resp = client.embeddings.create(model=OPENAI_EMBED_MODEL, input=texts)
+            model = model_name or OPENAI_EMBED_MODEL
+            resp = client.embeddings.create(model=model, input=texts)
             return [d.embedding for d in resp.data]
         except Exception as e:
             if attempt == 4:

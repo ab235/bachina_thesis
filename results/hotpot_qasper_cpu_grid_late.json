@@ -1,0 +1,267 @@
+{
+  "config": {
+    "datasets": [
+      "hotpotqa_distractor"
+    ],
+    "hotpot_distractor_file": "datasets/hotpot_dev_distractor_v1.json",
+    "qasper_split": "test",
+    "data_dir": "datasets",
+    "max_queries": 200,
+    "max_corpus_docs": 8000,
+    "seed": 42,
+    "batch_size": 32,
+    "sbert_model": "sentence-transformers/msmarco-MiniLM-L6-v3",
+    "token_size": 200,
+    "max_chars": 1200,
+    "overlap": 100,
+    "min_chars": 200,
+    "similarity_threshold": 0.8,
+    "k_values": [
+      1,
+      3,
+      5,
+      10
+    ],
+    "chunking_mode": "late",
+    "late_top_docs": 20,
+    "chunkers": [
+      "token",
+      "sentence",
+      "recursive",
+      "semantic"
+    ],
+    "retrievers": [
+      "sbert",
+      "bm25"
+    ],
+    "output": "results/hotpot_qasper_cpu_grid_late.json",
+    "bm25_hostname": "localhost",
+    "bm25_port": 9200,
+    "bm25_username": "elastic",
+    "bm25_password": "q8wsuZZF",
+    "bm25_api_key": null,
+    "bm25_index_prefix": "cpu-grid",
+    "bm25_keep_indices": false,
+    "backend": "sbert",
+    "model": "",
+    "normalize": true
+  },
+  "results": [
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "late",
+      "chunker": "token",
+      "retriever": "sbert",
+      "num_queries": 200,
+      "num_docs": 1994,
+      "num_chunks": 1796,
+      "recall": {
+        "Recall@1": 0.41,
+        "Recall@3": 0.6075,
+        "Recall@5": 0.675,
+        "Recall@10": 0.7425
+      },
+      "mrr": {
+        "MRR@1": 0.82,
+        "MRR@3": 0.8641666666666665,
+        "MRR@5": 0.8719166666666663,
+        "MRR@10": 0.8741785714285711
+      },
+      "ndcg": {
+        "NDCG@1": 0.82,
+        "NDCG@3": 0.6447498634603241,
+        "NDCG@5": 0.6787868354194267,
+        "NDCG@10": 0.7061927420993596
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "late",
+      "chunker": "token",
+      "retriever": "bm25",
+      "num_queries": 200,
+      "num_docs": 1994,
+      "num_chunks": 2125,
+      "recall": {
+        "Recall@1": 0.3875,
+        "Recall@3": 0.635,
+        "Recall@5": 0.7325,
+        "Recall@10": 0.875
+      },
+      "mrr": {
+        "MRR@1": 0.775,
+        "MRR@3": 0.8366666666666667,
+        "MRR@5": 0.8469166666666668,
+        "MRR@10": 0.8524365079365082
+      },
+      "ndcg": {
+        "NDCG@1": 0.775,
+        "NDCG@3": 0.6538365402380376,
+        "NDCG@5": 0.7029114872573967,
+        "NDCG@10": 0.7595120885952654
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "late",
+      "chunker": "sentence",
+      "retriever": "sbert",
+      "num_queries": 200,
+      "num_docs": 1994,
+      "num_chunks": 6917,
+      "recall": {
+        "Recall@1": 0.41,
+        "Recall@3": 0.64,
+        "Recall@5": 0.695,
+        "Recall@10": 0.7725
+      },
+      "mrr": {
+        "MRR@1": 0.82,
+        "MRR@3": 0.875,
+        "MRR@5": 0.8785000000000001,
+        "MRR@10": 0.8818869047619047
+      },
+      "ndcg": {
+        "NDCG@1": 0.82,
+        "NDCG@3": 0.6698952959305696,
+        "NDCG@5": 0.6980023250704397,
+        "NDCG@10": 0.7289015581144836
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "late",
+      "chunker": "sentence",
+      "retriever": "bm25",
+      "num_queries": 200,
+      "num_docs": 1994,
+      "num_chunks": 8256,
+      "recall": {
+        "Recall@1": 0.385,
+        "Recall@3": 0.6375,
+        "Recall@5": 0.7325,
+        "Recall@10": 0.88
+      },
+      "mrr": {
+        "MRR@1": 0.77,
+        "MRR@3": 0.8341666666666667,
+        "MRR@5": 0.8409166666666666,
+        "MRR@10": 0.8493531746031746
+      },
+      "ndcg": {
+        "NDCG@1": 0.77,
+        "NDCG@3": 0.6534351441837787,
+        "NDCG@5": 0.700921046492242,
+        "NDCG@10": 0.7594455876884867
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "late",
+      "chunker": "recursive",
+      "retriever": "sbert",
+      "num_queries": 200,
+      "num_docs": 1994,
+      "num_chunks": 1730,
+      "recall": {
+        "Recall@1": 0.415,
+        "Recall@3": 0.61,
+        "Recall@5": 0.6725,
+        "Recall@10": 0.7525
+      },
+      "mrr": {
+        "MRR@1": 0.83,
+        "MRR@3": 0.8733333333333333,
+        "MRR@5": 0.8813333333333333,
+        "MRR@10": 0.8834365079365079
+      },
+      "ndcg": {
+        "NDCG@1": 0.83,
+        "NDCG@3": 0.6493484674060652,
+        "NDCG@5": 0.6811478142864914,
+        "NDCG@10": 0.7134438770743615
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "late",
+      "chunker": "recursive",
+      "retriever": "bm25",
+      "num_queries": 200,
+      "num_docs": 1994,
+      "num_chunks": 2053,
+      "recall": {
+        "Recall@1": 0.3875,
+        "Recall@3": 0.6325,
+        "Recall@5": 0.7325,
+        "Recall@10": 0.875
+      },
+      "mrr": {
+        "MRR@1": 0.775,
+        "MRR@3": 0.8366666666666667,
+        "MRR@5": 0.8479166666666668,
+        "MRR@10": 0.8537142857142858
+      },
+      "ndcg": {
+        "NDCG@1": 0.775,
+        "NDCG@3": 0.6535078604189012,
+        "NDCG@5": 0.7035000919040739,
+        "NDCG@10": 0.7599393899783108
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "late",
+      "chunker": "semantic",
+      "retriever": "sbert",
+      "num_queries": 200,
+      "num_docs": 1994,
+      "num_chunks": 6858,
+      "recall": {
+        "Recall@1": 0.4125,
+        "Recall@3": 0.625,
+        "Recall@5": 0.69,
+        "Recall@10": 0.76
+      },
+      "mrr": {
+        "MRR@1": 0.825,
+        "MRR@3": 0.8708333333333335,
+        "MRR@5": 0.8773333333333335,
+        "MRR@10": 0.8807757936507938
+      },
+      "ndcg": {
+        "NDCG@1": 0.825,
+        "NDCG@3": 0.6582169954784102,
+        "NDCG@5": 0.6905305706776008,
+        "NDCG@10": 0.7186751358672963
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "late",
+      "chunker": "semantic",
+      "retriever": "bm25",
+      "num_queries": 200,
+      "num_docs": 1994,
+      "num_chunks": 8183,
+      "recall": {
+        "Recall@1": 0.3925,
+        "Recall@3": 0.66,
+        "Recall@5": 0.7675,
+        "Recall@10": 0.885
+      },
+      "mrr": {
+        "MRR@1": 0.785,
+        "MRR@3": 0.8500000000000001,
+        "MRR@5": 0.8585,
+        "MRR@10": 0.8610138888888887
+      },
+      "ndcg": {
+        "NDCG@1": 0.785,
+        "NDCG@3": 0.6734351441837788,
+        "NDCG@5": 0.7265822852134414,
+        "NDCG@10": 0.7730979840335699
+      }
+    }
+  ]
+}

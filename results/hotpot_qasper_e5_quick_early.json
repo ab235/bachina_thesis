@@ -1,0 +1,170 @@
+{
+  "config": {
+    "datasets": [
+      "hotpotqa_distractor"
+    ],
+    "hotpot_distractor_file": "datasets/hotpot_dev_distractor_v1.json",
+    "qasper_split": "test",
+    "data_dir": "datasets",
+    "max_queries": 200,
+    "max_corpus_docs": 8000,
+    "seed": 42,
+    "batch_size": 16,
+    "sbert_model": "sentence-transformers/msmarco-MiniLM-L6-v3",
+    "token_size": 256,
+    "max_chars": 1200,
+    "overlap": 64,
+    "min_chars": 200,
+    "similarity_threshold": 0.8,
+    "k_values": [
+      1,
+      3,
+      5,
+      10
+    ],
+    "chunking_mode": "early",
+    "hierarchical_top_docs": 20,
+    "chunkers": [
+      "late_token_pool",
+      "semantic"
+    ],
+    "retrievers": [
+      "e5",
+      "sbert"
+    ],
+    "e5_model": "intfloat/e5-base-v2",
+    "output": "results/hotpot_qasper_e5_quick_early.json",
+    "bm25_hostname": "localhost",
+    "bm25_port": 9200,
+    "bm25_username": "elastic",
+    "bm25_password": null,
+    "bm25_api_key": null,
+    "bm25_index_prefix": "cpu-grid",
+    "bm25_keep_indices": false,
+    "backend": "sbert",
+    "model": "",
+    "normalize": true
+  },
+  "results": [
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "early",
+      "chunker": "late_token_pool",
+      "retriever": "e5",
+      "num_queries": 200,
+      "num_docs": 1994,
+      "num_chunks": 2090,
+      "started_at": "2026-02-13T02:23:29.194367+00:00",
+      "finished_at": "2026-02-13T02:24:01.491168+00:00",
+      "duration_seconds": 32.299,
+      "recall": {
+        "Recall@1": 0.4625,
+        "Recall@3": 0.8475,
+        "Recall@5": 0.9125,
+        "Recall@10": 0.9675
+      },
+      "mrr": {
+        "MRR@1": 0.925,
+        "MRR@3": 0.9566666666666667,
+        "MRR@5": 0.9579166666666667,
+        "MRR@10": 0.9579166666666667
+      },
+      "ndcg": {
+        "NDCG@1": 0.925,
+        "NDCG@3": 0.8509889529795791,
+        "NDCG@5": 0.8842429925218839,
+        "NDCG@10": 0.9062744676561527
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "early",
+      "chunker": "late_token_pool",
+      "retriever": "sbert",
+      "num_queries": 200,
+      "num_docs": 1994,
+      "num_chunks": 2088,
+      "started_at": "2026-02-13T02:24:01.498732+00:00",
+      "finished_at": "2026-02-13T02:24:19.863008+00:00",
+      "duration_seconds": 18.367,
+      "recall": {
+        "Recall@1": 0.4075,
+        "Recall@3": 0.5975,
+        "Recall@5": 0.675,
+        "Recall@10": 0.75
+      },
+      "mrr": {
+        "MRR@1": 0.815,
+        "MRR@3": 0.8616666666666666,
+        "MRR@5": 0.8719166666666667,
+        "MRR@10": 0.8740892857142856
+      },
+      "ndcg": {
+        "NDCG@1": 0.815,
+        "NDCG@3": 0.6390925038220512,
+        "NDCG@5": 0.678410838232606,
+        "NDCG@10": 0.7084529854084961
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "early",
+      "chunker": "semantic",
+      "retriever": "e5",
+      "num_queries": 200,
+      "num_docs": 1994,
+      "num_chunks": 8321,
+      "started_at": "2026-02-13T02:24:19.871709+00:00",
+      "finished_at": "2026-02-13T02:25:25.903122+00:00",
+      "duration_seconds": 66.037,
+      "recall": {
+        "Recall@1": 0.465,
+        "Recall@3": 0.825,
+        "Recall@5": 0.9025,
+        "Recall@10": 0.96
+      },
+      "mrr": {
+        "MRR@1": 0.93,
+        "MRR@3": 0.955,
+        "MRR@5": 0.95875,
+        "MRR@10": 0.95875
+      },
+      "ndcg": {
+        "NDCG@1": 0.93,
+        "NDCG@3": 0.8327050683103839,
+        "NDCG@5": 0.8720234027209379,
+        "NDCG@10": 0.8948817594809964
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "early",
+      "chunker": "semantic",
+      "retriever": "sbert",
+      "num_queries": 200,
+      "num_docs": 1994,
+      "num_chunks": 8321,
+      "started_at": "2026-02-13T02:25:25.907558+00:00",
+      "finished_at": "2026-02-13T02:26:08.815970+00:00",
+      "duration_seconds": 42.914,
+      "recall": {
+        "Recall@1": 0.4125,
+        "Recall@3": 0.6275,
+        "Recall@5": 0.6975,
+        "Recall@10": 0.7675
+      },
+      "mrr": {
+        "MRR@1": 0.825,
+        "MRR@3": 0.8725000000000002,
+        "MRR@5": 0.8780000000000001,
+        "MRR@10": 0.8817202380952383
+      },
+      "ndcg": {
+        "NDCG@1": 0.825,
+        "NDCG@3": 0.6605526555688421,
+        "NDCG@5": 0.6953725599447421,
+        "NDCG@10": 0.7234774881330033
+      }
+    }
+  ]
+}

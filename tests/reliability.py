@@ -5,7 +5,8 @@ import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
+from textwrap import dedent
 
 CURRENT_DIR = Path(__file__).resolve().parent
 ROOT_DIR = CURRENT_DIR.parent
@@ -15,18 +16,99 @@ if str(CURRENT_DIR) not in sys.path:
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
+from config import OPENAI_API_KEY, OPENAI_GRADER_MODEL
 from ask import answer as rag_answer
 from ground_truth import GROUND_TRUTH, GroundTruthCase
+
+ALLOWED_SCORES = (1.0, 0.9, 0.8, 0.7, 0.6, 0.5)
+SCORE_GUIDE = "\n".join(
+    [
+        "1.0 = perfect match",
+        "0.9 = very close",
+        "0.8 = wording is off but meaning is close",
+        "0.7 = mostly wrong",
+        "0.6 = completely incorrect",
+        "0.5 = no answer",
+    ]
+)
+JUDGE_SYSTEM_PROMPT = dedent(
+    """\
+    You are an impartial grader. Score the model's answer against the gold answer for the question.
+    Return only JSON like {"score": 0.9, "rationale": "..."}.
+    Use the provided scoring scale without inventing new values.
+    """
+)
+_judge_client: Any = None
 
 
 @dataclass
 class EvaluationResult:
     case: GroundTruthCase
     response: str
-    hits: List[str]
-    missing: List[str]
     score: float
     passed: bool
+    rationale: str
+
+
+def get_judge_client():
+    global _judge_client
+    if not _judge_client:
+        try:
+            from openai import OpenAI  # local import so --dry-run works without the dependency
+        except ModuleNotFoundError as exc:
+            raise RuntimeError("The 'openai' package is required to judge answers.") from exc
+        _judge_client = OpenAI(api_key=OPENAI_API_KEY)
+    return _judge_client
+
+
+def normalize_score(raw_score: float) -> float:
+    return min(ALLOWED_SCORES, key=lambda allowed: abs(allowed - raw_score))
+
+
+def judge_response(question: str, gold_answer: str, model_answer: str) -> Tuple[float, str]:
+    trimmed_answer = model_answer.strip()
+    if not trimmed_answer:
+        return 0.5, "No answer produced by the model."
+
+    client = get_judge_client()
+    user_prompt = dedent(
+        f"""\
+        Score the model response using this scale:
+        {SCORE_GUIDE}
+
+        Question:
+        {question}
+
+        Gold answer:
+        {gold_answer}
+
+        Model answer:
+        {trimmed_answer}
+
+        Respond with JSON only.
+        """
+    )
+    completion = client.chat.completions.create(
+        model=OPENAI_GRADER_MODEL,
+        temperature=0.0,
+        messages=[
+            {"role": "system", "content": JUDGE_SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt},
+        ],
+    )
+    content = completion.choices[0].message.content
+    try:
+        payload = json.loads(content)
+    except json.JSONDecodeError:
+        return 0.6, f"Judge returned invalid JSON: {content!r}"
+
+    raw_score = payload.get("score")
+    try:
+        score_value = float(raw_score)
+    except (TypeError, ValueError):
+        score_value = 0.6
+    rationale = str(payload.get("rationale", "")).strip() or "No rationale provided."
+    return normalize_score(score_value), rationale
 
 
 def load_cached_responses(path: Optional[Path]) -> Dict[str, Dict[str, Optional[str]]]:
@@ -63,12 +145,9 @@ def save_cached_responses(path: Path, cache: Dict[str, Dict[str, Optional[str]]]
 
 
 def evaluate_response(case: GroundTruthCase, response: str) -> EvaluationResult:
-    normalized = response.lower()
-    hits = [kw for kw in case.keywords if kw.lower() in normalized]
-    missing = [kw for kw in case.keywords if kw.lower() not in normalized]
-    score = len(hits) / len(case.keywords) if case.keywords else 1.0
+    score, rationale = judge_response(case.question, case.answer, response)
     passed = score >= case.pass_threshold
-    return EvaluationResult(case=case, response=response, hits=hits, missing=missing, score=score, passed=passed)
+    return EvaluationResult(case=case, response=response, score=score, passed=passed, rationale=rationale)
 
 
 def select_cases(args: argparse.Namespace) -> List[GroundTruthCase]:
@@ -138,12 +217,11 @@ def run() -> None:
         evaluation = evaluate_response(case, response)
         results.append(evaluation)
         status = "PASS" if evaluation.passed else "FAIL"
-        print(f"[{case.id}] {status} score={evaluation.score:.2f} ({len(evaluation.hits)}/{len(case.keywords)} keywords)")
+        print(f"[{case.id}] {status} score={evaluation.score:.1f}")
         print(f"Question : {case.question}")
         print(f"Expected : {case.answer}")
         print(f"Reference: {case.reference}")
-        if evaluation.missing:
-            print(f"Missing keywords: {', '.join(evaluation.missing)}")
+        print(f"Judge rationale: {evaluation.rationale}")
         print(f"Model answer:\n{response.strip()}\n{'-' * 80}")
 
     passed = sum(1 for result in results if result.passed)
