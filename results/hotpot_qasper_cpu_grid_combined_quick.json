@@ -1,6 +1,6 @@
 {
   "config": {
-    "generated_at": "2026-02-13T02:37:41.866261+00:00",
+    "generated_at": "2026-02-14T04:58:42.812145+00:00",
     "runs": [
       {
         "chunking_mode": "early",
@@ -10,8 +10,9 @@
           ],
           "hotpot_distractor_file": "datasets/hotpot_dev_distractor_v1.json",
           "qasper_split": "test",
+          "beir_split": "test",
           "data_dir": "datasets",
-          "max_queries": 100,
+          "max_queries": 20,
           "max_corpus_docs": 8000,
           "seed": 42,
           "batch_size": 32,
@@ -28,7 +29,7 @@
             10
           ],
           "chunking_mode": "early",
-          "hierarchical_top_docs": 20,
+          "hierarchical_top_docs": 5,
           "chunkers": [
             "token",
             "sentence",
@@ -42,14 +43,20 @@
             "bm25"
           ],
           "e5_model": "intfloat/e5-base-v2",
-          "output": "/tmp/tmp.irK8Ic7zdU",
+          "output": "/tmp/tmp.JZzxn9SufR",
           "bm25_hostname": "localhost",
           "bm25_port": 9200,
           "bm25_username": "elastic",
-          "bm25_password": "q8wsuZZF",
+          "bm25_password": null,
           "bm25_api_key": null,
           "bm25_index_prefix": "cpu-grid",
           "bm25_keep_indices": false,
+          "hotpot_support_fact_coverage": false,
+          "hotpot_official_emf1": true,
+          "hotpot_answer_model": "gpt-4o-mini",
+          "hotpot_answer_top_k": 5,
+          "hotpot_answer_max_queries": 0,
+          "hotpot_sp_max_facts": 30,
           "backend": "sbert",
           "model": "",
           "normalize": true
@@ -63,8 +70,9 @@
           ],
           "hotpot_distractor_file": "datasets/hotpot_dev_distractor_v1.json",
           "qasper_split": "test",
+          "beir_split": "test",
           "data_dir": "datasets",
-          "max_queries": 100,
+          "max_queries": 20,
           "max_corpus_docs": 8000,
           "seed": 42,
           "batch_size": 32,
@@ -81,7 +89,7 @@
             10
           ],
           "chunking_mode": "hierarchical",
-          "hierarchical_top_docs": 20,
+          "hierarchical_top_docs": 5,
           "chunkers": [
             "token",
             "sentence",
@@ -95,14 +103,20 @@
             "bm25"
           ],
           "e5_model": "intfloat/e5-base-v2",
-          "output": "/tmp/tmp.FYf6hpV44p",
+          "output": "/tmp/tmp.Jxjt11sVqi",
           "bm25_hostname": "localhost",
           "bm25_port": 9200,
           "bm25_username": "elastic",
-          "bm25_password": "q8wsuZZF",
+          "bm25_password": null,
           "bm25_api_key": null,
           "bm25_index_prefix": "cpu-grid",
           "bm25_keep_indices": false,
+          "hotpot_support_fact_coverage": false,
+          "hotpot_official_emf1": true,
+          "hotpot_answer_model": "gpt-4o-mini",
+          "hotpot_answer_top_k": 5,
+          "hotpot_answer_max_queries": 0,
+          "hotpot_sp_max_facts": 30,
           "backend": "sbert",
           "model": "",
           "normalize": true
@@ -116,29 +130,44 @@
       "chunking_mode": "early",
       "chunker": "token",
       "retriever": "sbert",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 1088,
-      "started_at": "2026-02-13T02:29:07.466251+00:00",
-      "finished_at": "2026-02-13T02:29:12.296199+00:00",
-      "duration_seconds": 4.83,
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 223,
+      "started_at": "2026-02-14T04:50:01.195998+00:00",
+      "finished_at": "2026-02-14T04:50:25.710513+00:00",
+      "duration_seconds": 24.517,
       "recall": {
-        "Recall@1": 0.42,
-        "Recall@3": 0.62,
-        "Recall@5": 0.73,
-        "Recall@10": 0.81
+        "Recall@1": 0.475,
+        "Recall@3": 0.8,
+        "Recall@5": 0.825,
+        "Recall@10": 0.975
       },
       "mrr": {
-        "MRR@1": 0.84,
-        "MRR@3": 0.8816666666666667,
-        "MRR@5": 0.8951666666666668,
-        "MRR@10": 0.8951666666666668
+        "MRR@1": 0.95,
+        "MRR@3": 0.975,
+        "MRR@5": 0.975,
+        "MRR@10": 0.975
       },
       "ndcg": {
-        "NDCG@1": 0.84,
-        "NDCG@3": 0.6569400910805121,
-        "NDCG@5": 0.7118106288700862,
-        "NDCG@10": 0.7446948193903508
+        "NDCG@1": 0.95,
+        "NDCG@3": 0.8138743551166844,
+        "NDCG@5": 0.8257342407551492,
+        "NDCG@10": 0.887202412294618
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.0,
+        "answer_f1": 0.1675295902927482,
+        "answer_precision": 0.09865304715923909,
+        "answer_recall": 0.6458333333333333,
+        "supporting_fact_em": 0.0,
+        "supporting_fact_f1": 0.1979462409770325,
+        "supporting_fact_precision": 0.11421972807034723,
+        "supporting_fact_recall": 0.8,
+        "joint_em": 0.0,
+        "joint_f1": 0.023974410235495187,
+        "joint_precision": 0.01231894334949334,
+        "joint_recall": 0.5729166666666667
       }
     },
     {
@@ -146,29 +175,44 @@
       "chunking_mode": "early",
       "chunker": "token",
       "retriever": "e5",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 1088,
-      "started_at": "2026-02-13T02:29:12.297562+00:00",
-      "finished_at": "2026-02-13T02:29:21.445042+00:00",
-      "duration_seconds": 9.148,
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 223,
+      "started_at": "2026-02-14T04:50:25.711141+00:00",
+      "finished_at": "2026-02-14T04:50:48.278670+00:00",
+      "duration_seconds": 22.569,
       "recall": {
-        "Recall@1": 0.465,
-        "Recall@3": 0.86,
-        "Recall@5": 0.95,
-        "Recall@10": 0.995
+        "Recall@1": 0.475,
+        "Recall@3": 0.95,
+        "Recall@5": 1.0,
+        "Recall@10": 1.0
       },
       "mrr": {
-        "MRR@1": 0.93,
-        "MRR@3": 0.96,
-        "MRR@5": 0.96,
-        "MRR@10": 0.96
+        "MRR@1": 0.95,
+        "MRR@3": 0.975,
+        "MRR@5": 0.975,
+        "MRR@10": 0.975
       },
       "ndcg": {
-        "NDCG@1": 0.93,
-        "NDCG@3": 0.8605875569253193,
-        "NDCG@5": 0.9062388903021553,
-        "NDCG@10": 0.9242920751664964
+        "NDCG@1": 0.95,
+        "NDCG@3": 0.9379581183722282,
+        "NDCG@5": 0.9643649306294872,
+        "NDCG@10": 0.9643649306294872
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.05,
+        "answer_f1": 0.23344609094609098,
+        "answer_precision": 0.15702317049995068,
+        "answer_recall": 0.7958333333333334,
+        "supporting_fact_em": 0.0,
+        "supporting_fact_f1": 0.25862521362366564,
+        "supporting_fact_precision": 0.1499076914134459,
+        "supporting_fact_recall": 1.0,
+        "joint_em": 0.0,
+        "joint_f1": 0.04496249952046486,
+        "joint_precision": 0.024163963825543446,
+        "joint_recall": 0.7958333333333334
       }
     },
     {
@@ -176,689 +220,1034 @@
       "chunking_mode": "early",
       "chunker": "token",
       "retriever": "bm25",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 1088,
-      "started_at": "2026-02-13T02:29:21.446678+00:00",
-      "finished_at": "2026-02-13T02:29:25.580117+00:00",
-      "duration_seconds": 4.133,
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 223,
+      "started_at": "2026-02-14T04:50:48.279492+00:00",
+      "finished_at": "2026-02-14T04:51:03.290448+00:00",
+      "duration_seconds": 15.011,
       "recall": {
-        "Recall@1": 0.39,
-        "Recall@3": 0.66,
-        "Recall@5": 0.765,
-        "Recall@10": 0.91
-      },
-      "mrr": {
-        "MRR@1": 0.78,
-        "MRR@3": 0.8549999999999999,
-        "MRR@5": 0.8599999999999999,
-        "MRR@10": 0.8636785714285712
-      },
-      "ndcg": {
-        "NDCG@1": 0.78,
-        "NDCG@3": 0.6751134446359383,
-        "NDCG@5": 0.7278807093958528,
-        "NDCG@10": 0.7853055213604043
-      }
-    },
-    {
-      "dataset": "hotpotqa_distractor",
-      "chunking_mode": "early",
-      "chunker": "sentence",
-      "retriever": "sbert",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 4222,
-      "started_at": "2026-02-13T02:29:25.580619+00:00",
-      "finished_at": "2026-02-13T02:29:29.699398+00:00",
-      "duration_seconds": 4.119,
-      "recall": {
-        "Recall@1": 0.405,
-        "Recall@3": 0.64,
-        "Recall@5": 0.735,
-        "Recall@10": 0.835
-      },
-      "mrr": {
-        "MRR@1": 0.81,
-        "MRR@3": 0.8766666666666667,
-        "MRR@5": 0.8806666666666668,
-        "MRR@10": 0.8835238095238096
-      },
-      "ndcg": {
-        "NDCG@1": 0.81,
-        "NDCG@3": 0.6656253718039662,
-        "NDCG@5": 0.7139173864065275,
-        "NDCG@10": 0.7532431800857314
-      }
-    },
-    {
-      "dataset": "hotpotqa_distractor",
-      "chunking_mode": "early",
-      "chunker": "sentence",
-      "retriever": "e5",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 4222,
-      "started_at": "2026-02-13T02:29:29.701195+00:00",
-      "finished_at": "2026-02-13T02:29:41.172568+00:00",
-      "duration_seconds": 11.474,
-      "recall": {
-        "Recall@1": 0.455,
-        "Recall@3": 0.84,
-        "Recall@5": 0.915,
-        "Recall@10": 0.985
-      },
-      "mrr": {
-        "MRR@1": 0.91,
-        "MRR@3": 0.95,
-        "MRR@5": 0.95,
-        "MRR@10": 0.95
-      },
-      "ndcg": {
-        "NDCG@1": 0.91,
-        "NDCG@3": 0.837376388491247,
-        "NDCG@5": 0.8759117904850039,
-        "NDCG@10": 0.9047144063453717
-      }
-    },
-    {
-      "dataset": "hotpotqa_distractor",
-      "chunking_mode": "early",
-      "chunker": "sentence",
-      "retriever": "bm25",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 4222,
-      "started_at": "2026-02-13T02:29:41.174278+00:00",
-      "finished_at": "2026-02-13T02:29:50.961255+00:00",
-      "duration_seconds": 9.787,
-      "recall": {
-        "Recall@1": 0.395,
-        "Recall@3": 0.615,
-        "Recall@5": 0.75,
-        "Recall@10": 0.86
-      },
-      "mrr": {
-        "MRR@1": 0.79,
-        "MRR@3": 0.845,
-        "MRR@5": 0.8560000000000001,
-        "MRR@10": 0.8603452380952382
-      },
-      "ndcg": {
-        "NDCG@1": 0.79,
-        "NDCG@3": 0.6441652200571752,
-        "NDCG@5": 0.7119704598773461,
-        "NDCG@10": 0.7559087072377503
-      }
-    },
-    {
-      "dataset": "hotpotqa_distractor",
-      "chunking_mode": "early",
-      "chunker": "recursive",
-      "retriever": "sbert",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 1050,
-      "started_at": "2026-02-13T02:29:50.961825+00:00",
-      "finished_at": "2026-02-13T02:29:53.745179+00:00",
-      "duration_seconds": 2.783,
-      "recall": {
-        "Recall@1": 0.415,
-        "Recall@3": 0.615,
-        "Recall@5": 0.725,
-        "Recall@10": 0.81
-      },
-      "mrr": {
-        "MRR@1": 0.83,
-        "MRR@3": 0.8783333333333333,
-        "MRR@5": 0.8898333333333334,
-        "MRR@10": 0.8898333333333334
-      },
-      "ndcg": {
-        "NDCG@1": 0.83,
-        "NDCG@3": 0.65401978758693,
-        "NDCG@5": 0.709159029474537,
-        "NDCG@10": 0.7439467935783898
-      }
-    },
-    {
-      "dataset": "hotpotqa_distractor",
-      "chunking_mode": "early",
-      "chunker": "recursive",
-      "retriever": "e5",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 1050,
-      "started_at": "2026-02-13T02:29:53.746357+00:00",
-      "finished_at": "2026-02-13T02:30:02.146782+00:00",
-      "duration_seconds": 8.4,
-      "recall": {
-        "Recall@1": 0.465,
-        "Recall@3": 0.86,
-        "Recall@5": 0.95,
-        "Recall@10": 0.99
-      },
-      "mrr": {
-        "MRR@1": 0.93,
-        "MRR@3": 0.9616666666666666,
-        "MRR@5": 0.9616666666666666,
-        "MRR@10": 0.9616666666666666
-      },
-      "ndcg": {
-        "NDCG@1": 0.93,
-        "NDCG@3": 0.8629959332508739,
-        "NDCG@5": 0.9081098584316439,
-        "NDCG@10": 0.9246620815361888
-      }
-    },
-    {
-      "dataset": "hotpotqa_distractor",
-      "chunking_mode": "early",
-      "chunker": "recursive",
-      "retriever": "bm25",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 1050,
-      "started_at": "2026-02-13T02:30:02.148346+00:00",
-      "finished_at": "2026-02-13T02:30:05.803954+00:00",
-      "duration_seconds": 3.656,
-      "recall": {
-        "Recall@1": 0.39,
-        "Recall@3": 0.655,
-        "Recall@5": 0.755,
-        "Recall@10": 0.92
-      },
-      "mrr": {
-        "MRR@1": 0.78,
-        "MRR@3": 0.8483333333333332,
-        "MRR@5": 0.8558333333333331,
-        "MRR@10": 0.8599285714285712
-      },
-      "ndcg": {
-        "NDCG@1": 0.78,
-        "NDCG@3": 0.670442124455075,
-        "NDCG@5": 0.7213748202833622,
-        "NDCG@10": 0.7873524377762726
-      }
-    },
-    {
-      "dataset": "hotpotqa_distractor",
-      "chunking_mode": "early",
-      "chunker": "semantic",
-      "retriever": "sbert",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 4187,
-      "started_at": "2026-02-13T02:30:05.804358+00:00",
-      "finished_at": "2026-02-13T02:30:27.197098+00:00",
-      "duration_seconds": 21.395,
-      "recall": {
-        "Recall@1": 0.39,
+        "Recall@1": 0.35,
         "Recall@3": 0.625,
-        "Recall@5": 0.73,
-        "Recall@10": 0.825
-      },
-      "mrr": {
-        "MRR@1": 0.78,
-        "MRR@3": 0.8499999999999999,
-        "MRR@5": 0.8584999999999999,
-        "MRR@10": 0.8594999999999999
-      },
-      "ndcg": {
-        "NDCG@1": 0.78,
-        "NDCG@3": 0.6472309560210026,
-        "NDCG@5": 0.6997295166828837,
-        "NDCG@10": 0.7376875532822744
-      }
-    },
-    {
-      "dataset": "hotpotqa_distractor",
-      "chunking_mode": "early",
-      "chunker": "semantic",
-      "retriever": "e5",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 4187,
-      "started_at": "2026-02-13T02:30:27.198466+00:00",
-      "finished_at": "2026-02-13T02:31:00.804241+00:00",
-      "duration_seconds": 33.609,
-      "recall": {
-        "Recall@1": 0.48,
-        "Recall@3": 0.85,
-        "Recall@5": 0.935,
-        "Recall@10": 0.985
-      },
-      "mrr": {
-        "MRR@1": 0.96,
-        "MRR@3": 0.9733333333333333,
-        "MRR@5": 0.9758333333333333,
-        "MRR@10": 0.9758333333333333
-      },
-      "ndcg": {
-        "NDCG@1": 0.96,
-        "NDCG@3": 0.8604421244550742,
-        "NDCG@5": 0.9031840725081512,
-        "NDCG@10": 0.9232297425401985
-      }
-    },
-    {
-      "dataset": "hotpotqa_distractor",
-      "chunking_mode": "early",
-      "chunker": "semantic",
-      "retriever": "bm25",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 4187,
-      "started_at": "2026-02-13T02:31:00.806158+00:00",
-      "finished_at": "2026-02-13T02:31:25.636625+00:00",
-      "duration_seconds": 24.833,
-      "recall": {
-        "Recall@1": 0.405,
-        "Recall@3": 0.67,
-        "Recall@5": 0.78,
-        "Recall@10": 0.84
-      },
-      "mrr": {
-        "MRR@1": 0.81,
-        "MRR@3": 0.8683333333333333,
-        "MRR@5": 0.8773333333333333,
-        "MRR@10": 0.8789999999999999
-      },
-      "ndcg": {
-        "NDCG@1": 0.81,
-        "NDCG@3": 0.6872309560210023,
-        "NDCG@5": 0.7429076061046758,
-        "NDCG@10": 0.7685554969536681
-      }
-    },
-    {
-      "dataset": "hotpotqa_distractor",
-      "chunking_mode": "early",
-      "chunker": "late_token_pool",
-      "retriever": "sbert",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 1157,
-      "started_at": "2026-02-13T02:31:25.637249+00:00",
-      "finished_at": "2026-02-13T02:31:34.651421+00:00",
-      "duration_seconds": 9.014,
-      "recall": {
-        "Recall@1": 0.415,
-        "Recall@3": 0.605,
-        "Recall@5": 0.725,
-        "Recall@10": 0.83
-      },
-      "mrr": {
-        "MRR@1": 0.83,
-        "MRR@3": 0.8733333333333333,
-        "MRR@5": 0.8873333333333333,
-        "MRR@10": 0.8873333333333333
-      },
-      "ndcg": {
-        "NDCG@1": 0.83,
-        "NDCG@3": 0.6486911077677937,
-        "NDCG@5": 0.7093804162048853,
-        "NDCG@10": 0.751185360100586
-      }
-    },
-    {
-      "dataset": "hotpotqa_distractor",
-      "chunking_mode": "early",
-      "chunker": "late_token_pool",
-      "retriever": "e5",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 1163,
-      "started_at": "2026-02-13T02:31:34.658781+00:00",
-      "finished_at": "2026-02-13T02:31:52.233024+00:00",
-      "duration_seconds": 17.577,
-      "recall": {
-        "Recall@1": 0.465,
-        "Recall@3": 0.86,
-        "Recall@5": 0.945,
-        "Recall@10": 0.99
-      },
-      "mrr": {
-        "MRR@1": 0.93,
-        "MRR@3": 0.9616666666666666,
-        "MRR@5": 0.9616666666666666,
-        "MRR@10": 0.9616666666666666
-      },
-      "ndcg": {
-        "NDCG@1": 0.93,
-        "NDCG@3": 0.8621931411423556,
-        "NDCG@5": 0.9054724973914986,
-        "NDCG@10": 0.924099234924513
-      }
-    },
-    {
-      "dataset": "hotpotqa_distractor",
-      "chunking_mode": "early",
-      "chunker": "late_token_pool",
-      "retriever": "bm25",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 1157,
-      "started_at": "2026-02-13T02:31:52.241076+00:00",
-      "finished_at": "2026-02-13T02:32:02.659878+00:00",
-      "duration_seconds": 10.419,
-      "recall": {
-        "Recall@1": 0.39,
-        "Recall@3": 0.66,
-        "Recall@5": 0.77,
-        "Recall@10": 0.905
-      },
-      "mrr": {
-        "MRR@1": 0.78,
-        "MRR@3": 0.8516666666666665,
-        "MRR@5": 0.8566666666666665,
-        "MRR@10": 0.8603452380952378
-      },
-      "ndcg": {
-        "NDCG@1": 0.78,
-        "NDCG@3": 0.6743106525274202,
-        "NDCG@5": 0.7291811903169948,
-        "NDCG@10": 0.7824298472613994
-      }
-    },
-    {
-      "dataset": "hotpotqa_distractor",
-      "chunking_mode": "hierarchical",
-      "chunker": "token",
-      "retriever": "sbert",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 887,
-      "started_at": "2026-02-13T02:32:09.337825+00:00",
-      "finished_at": "2026-02-13T02:32:19.983442+00:00",
-      "duration_seconds": 10.646,
-      "recall": {
-        "Recall@1": 0.42,
-        "Recall@3": 0.615,
-        "Recall@5": 0.735,
-        "Recall@10": 0.81
-      },
-      "mrr": {
-        "MRR@1": 0.84,
-        "MRR@3": 0.8783333333333333,
-        "MRR@5": 0.8918333333333334,
-        "MRR@10": 0.8918333333333334
-      },
-      "ndcg": {
-        "NDCG@1": 0.84,
-        "NDCG@3": 0.6538743551166849,
-        "NDCG@5": 0.7134888471616447,
-        "NDCG@10": 0.7437772818133865
-      }
-    },
-    {
-      "dataset": "hotpotqa_distractor",
-      "chunking_mode": "hierarchical",
-      "chunker": "token",
-      "retriever": "e5",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 998,
-      "started_at": "2026-02-13T02:32:19.985472+00:00",
-      "finished_at": "2026-02-13T02:32:54.239011+00:00",
-      "duration_seconds": 34.256,
-      "recall": {
-        "Recall@1": 0.465,
-        "Recall@3": 0.86,
-        "Recall@5": 0.95,
-        "Recall@10": 0.995
-      },
-      "mrr": {
-        "MRR@1": 0.93,
-        "MRR@3": 0.96,
-        "MRR@5": 0.96,
-        "MRR@10": 0.96
-      },
-      "ndcg": {
-        "NDCG@1": 0.93,
-        "NDCG@3": 0.8605875569253193,
-        "NDCG@5": 0.9062388903021553,
-        "NDCG@10": 0.9242920751664964
-      }
-    },
-    {
-      "dataset": "hotpotqa_distractor",
-      "chunking_mode": "hierarchical",
-      "chunker": "token",
-      "retriever": "bm25",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 1077,
-      "started_at": "2026-02-13T02:32:54.240918+00:00",
-      "finished_at": "2026-02-13T02:33:01.091099+00:00",
-      "duration_seconds": 6.85,
-      "recall": {
-        "Recall@1": 0.39,
-        "Recall@3": 0.66,
-        "Recall@5": 0.765,
-        "Recall@10": 0.915
-      },
-      "mrr": {
-        "MRR@1": 0.78,
-        "MRR@3": 0.8549999999999999,
-        "MRR@5": 0.8599999999999999,
-        "MRR@10": 0.8636785714285712
-      },
-      "ndcg": {
-        "NDCG@1": 0.78,
-        "NDCG@3": 0.6751134446359383,
-        "NDCG@5": 0.7278807093958528,
-        "NDCG@10": 0.7869160430599126
-      }
-    },
-    {
-      "dataset": "hotpotqa_distractor",
-      "chunking_mode": "hierarchical",
-      "chunker": "sentence",
-      "retriever": "sbert",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 3401,
-      "started_at": "2026-02-13T02:33:01.091955+00:00",
-      "finished_at": "2026-02-13T02:33:11.837877+00:00",
-      "duration_seconds": 10.748,
-      "recall": {
-        "Recall@1": 0.42,
-        "Recall@3": 0.675,
-        "Recall@5": 0.74,
-        "Recall@10": 0.84
-      },
-      "mrr": {
-        "MRR@1": 0.84,
-        "MRR@3": 0.8916666666666667,
-        "MRR@5": 0.8966666666666667,
-        "MRR@10": 0.8980952380952381
-      },
-      "ndcg": {
-        "NDCG@1": 0.84,
-        "NDCG@3": 0.6946771472252026,
-        "NDCG@5": 0.7276624826694745,
-        "NDCG@10": 0.7677166544733701
-      }
-    },
-    {
-      "dataset": "hotpotqa_distractor",
-      "chunking_mode": "hierarchical",
-      "chunker": "sentence",
-      "retriever": "e5",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 3841,
-      "started_at": "2026-02-13T02:33:11.839824+00:00",
-      "finished_at": "2026-02-13T02:33:47.221016+00:00",
-      "duration_seconds": 35.385,
-      "recall": {
-        "Recall@1": 0.455,
-        "Recall@3": 0.84,
-        "Recall@5": 0.915,
-        "Recall@10": 0.99
-      },
-      "mrr": {
-        "MRR@1": 0.91,
-        "MRR@3": 0.95,
-        "MRR@5": 0.95,
-        "MRR@10": 0.95
-      },
-      "ndcg": {
-        "NDCG@1": 0.91,
-        "NDCG@3": 0.837376388491247,
-        "NDCG@5": 0.8761804945830369,
-        "NDCG@10": 0.9068288674112003
-      }
-    },
-    {
-      "dataset": "hotpotqa_distractor",
-      "chunking_mode": "hierarchical",
-      "chunker": "sentence",
-      "retriever": "bm25",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 4188,
-      "started_at": "2026-02-13T02:33:47.223221+00:00",
-      "finished_at": "2026-02-13T02:34:00.063563+00:00",
-      "duration_seconds": 12.84,
-      "recall": {
-        "Recall@1": 0.395,
-        "Recall@3": 0.615,
         "Recall@5": 0.75,
         "Recall@10": 0.9
       },
       "mrr": {
-        "MRR@1": 0.79,
-        "MRR@3": 0.845,
-        "MRR@5": 0.8560000000000001,
-        "MRR@10": 0.8615952380952382
+        "MRR@1": 0.7,
+        "MRR@3": 0.7416666666666667,
+        "MRR@5": 0.7791666666666667,
+        "MRR@10": 0.7791666666666667
       },
       "ndcg": {
-        "NDCG@1": 0.79,
-        "NDCG@3": 0.6441652200571752,
-        "NDCG@5": 0.7119704598773461,
-        "NDCG@10": 0.7711534941617576
+        "NDCG@1": 0.7,
+        "NDCG@3": 0.6299301972870468,
+        "NDCG@5": 0.6946037074400297,
+        "NDCG@10": 0.7528097682004942
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.05,
+        "answer_f1": 0.19449855107053252,
+        "answer_precision": 0.13385875154257507,
+        "answer_recall": 0.6583333333333334,
+        "supporting_fact_em": 0.0,
+        "supporting_fact_f1": 0.21536472652622204,
+        "supporting_fact_precision": 0.12760855823431538,
+        "supporting_fact_recall": 0.7583333333333333,
+        "joint_em": 0.0,
+        "joint_f1": 0.041474621485350596,
+        "joint_precision": 0.022986752240018005,
+        "joint_recall": 0.5604166666666667
       }
     },
     {
       "dataset": "hotpotqa_distractor",
-      "chunking_mode": "hierarchical",
-      "chunker": "recursive",
+      "chunking_mode": "early",
+      "chunker": "sentence",
       "retriever": "sbert",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 857,
-      "started_at": "2026-02-13T02:34:00.064663+00:00",
-      "finished_at": "2026-02-13T02:34:10.018950+00:00",
-      "duration_seconds": 9.957,
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 838,
+      "started_at": "2026-02-14T04:51:03.290808+00:00",
+      "finished_at": "2026-02-14T04:51:17.859255+00:00",
+      "duration_seconds": 14.57,
       "recall": {
-        "Recall@1": 0.415,
-        "Recall@3": 0.615,
-        "Recall@5": 0.725,
-        "Recall@10": 0.81
+        "Recall@1": 0.45,
+        "Recall@3": 0.775,
+        "Recall@5": 0.825,
+        "Recall@10": 0.9
       },
       "mrr": {
-        "MRR@1": 0.83,
-        "MRR@3": 0.8783333333333333,
-        "MRR@5": 0.8898333333333334,
-        "MRR@10": 0.8898333333333334
+        "MRR@1": 0.9,
+        "MRR@3": 0.9416666666666667,
+        "MRR@5": 0.9416666666666667,
+        "MRR@10": 0.9416666666666667
       },
       "ndcg": {
-        "NDCG@1": 0.83,
-        "NDCG@3": 0.65401978758693,
-        "NDCG@5": 0.709159029474537,
-        "NDCG@10": 0.7439467935783898
+        "NDCG@1": 0.9,
+        "NDCG@3": 0.7832169954784114,
+        "NDCG@5": 0.8082802872455057,
+        "NDCG@10": 0.8397923511081856
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.05,
+        "answer_f1": 0.18989334337160427,
+        "answer_precision": 0.13309481368304898,
+        "answer_recall": 0.5458333333333333,
+        "supporting_fact_em": 0.0,
+        "supporting_fact_f1": 0.3886507936507937,
+        "supporting_fact_precision": 0.3017857142857143,
+        "supporting_fact_recall": 0.5908333333333334,
+        "joint_em": 0.0,
+        "joint_f1": 0.08074358937276706,
+        "joint_precision": 0.05573833775934617,
+        "joint_recall": 0.39708333333333334
       }
     },
     {
       "dataset": "hotpotqa_distractor",
-      "chunking_mode": "hierarchical",
+      "chunking_mode": "early",
+      "chunker": "sentence",
+      "retriever": "e5",
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 838,
+      "started_at": "2026-02-14T04:51:17.860328+00:00",
+      "finished_at": "2026-02-14T04:51:36.693300+00:00",
+      "duration_seconds": 18.835,
+      "recall": {
+        "Recall@1": 0.5,
+        "Recall@3": 0.85,
+        "Recall@5": 0.975,
+        "Recall@10": 1.0
+      },
+      "mrr": {
+        "MRR@1": 1.0,
+        "MRR@3": 1.0,
+        "MRR@5": 1.0,
+        "MRR@10": 1.0
+      },
+      "ndcg": {
+        "NDCG@1": 1.0,
+        "NDCG@3": 0.8759162367444564,
+        "NDCG@5": 0.941933267387604,
+        "NDCG@10": 0.9528536392285123
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.1,
+        "answer_f1": 0.22932232971706656,
+        "answer_precision": 0.17496959739606796,
+        "answer_recall": 0.6458333333333334,
+        "supporting_fact_em": 0.0,
+        "supporting_fact_f1": 0.45686507936507936,
+        "supporting_fact_precision": 0.353452380952381,
+        "supporting_fact_recall": 0.6866666666666666,
+        "joint_em": 0.0,
+        "joint_f1": 0.1223658389376239,
+        "joint_precision": 0.08070774580228361,
+        "joint_recall": 0.52
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "early",
+      "chunker": "sentence",
+      "retriever": "bm25",
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 838,
+      "started_at": "2026-02-14T04:51:36.693682+00:00",
+      "finished_at": "2026-02-14T04:51:48.856493+00:00",
+      "duration_seconds": 12.163,
+      "recall": {
+        "Recall@1": 0.325,
+        "Recall@3": 0.65,
+        "Recall@5": 0.7,
+        "Recall@10": 0.875
+      },
+      "mrr": {
+        "MRR@1": 0.65,
+        "MRR@3": 0.7166666666666666,
+        "MRR@5": 0.7366666666666667,
+        "MRR@10": 0.7533333333333333
+      },
+      "ndcg": {
+        "NDCG@1": 0.65,
+        "NDCG@3": 0.6379581183722282,
+        "NDCG@5": 0.6616778896491577,
+        "NDCG@10": 0.7332295502520123
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.05,
+        "answer_f1": 0.1564209766841346,
+        "answer_precision": 0.11146161844691257,
+        "answer_recall": 0.4625,
+        "supporting_fact_em": 0.0,
+        "supporting_fact_f1": 0.3242460317460317,
+        "supporting_fact_precision": 0.25250000000000006,
+        "supporting_fact_recall": 0.4800000000000001,
+        "joint_em": 0.0,
+        "joint_f1": 0.07911506796974574,
+        "joint_precision": 0.05273007221536633,
+        "joint_recall": 0.32791666666666663
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "early",
+      "chunker": "recursive",
+      "retriever": "sbert",
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 215,
+      "started_at": "2026-02-14T04:51:48.856796+00:00",
+      "finished_at": "2026-02-14T04:52:06.114692+00:00",
+      "duration_seconds": 17.26,
+      "recall": {
+        "Recall@1": 0.45,
+        "Recall@3": 0.8,
+        "Recall@5": 0.85,
+        "Recall@10": 0.975
+      },
+      "mrr": {
+        "MRR@1": 0.9,
+        "MRR@3": 0.95,
+        "MRR@5": 0.95,
+        "MRR@10": 0.95
+      },
+      "ndcg": {
+        "NDCG@1": 0.9,
+        "NDCG@3": 0.8025596358401386,
+        "NDCG@5": 0.8262794071170682,
+        "NDCG@10": 0.8787775104371575
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.0,
+        "answer_f1": 0.1684348384262572,
+        "answer_precision": 0.09957004682623878,
+        "answer_recall": 0.6458333333333333,
+        "supporting_fact_em": 0.0,
+        "supporting_fact_f1": 0.20761782766870937,
+        "supporting_fact_precision": 0.12078741273010354,
+        "supporting_fact_recall": 0.8333333333333334,
+        "joint_em": 0.0,
+        "joint_f1": 0.025647895632654367,
+        "joint_precision": 0.013181149966080644,
+        "joint_recall": 0.5979166666666667
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "early",
       "chunker": "recursive",
       "retriever": "e5",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 963,
-      "started_at": "2026-02-13T02:34:10.021277+00:00",
-      "finished_at": "2026-02-13T02:34:43.816299+00:00",
-      "duration_seconds": 33.797,
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 215,
+      "started_at": "2026-02-14T04:52:06.115020+00:00",
+      "finished_at": "2026-02-14T04:52:26.266069+00:00",
+      "duration_seconds": 20.151,
       "recall": {
-        "Recall@1": 0.465,
-        "Recall@3": 0.86,
-        "Recall@5": 0.95,
-        "Recall@10": 0.99
+        "Recall@1": 0.475,
+        "Recall@3": 0.95,
+        "Recall@5": 1.0,
+        "Recall@10": 1.0
       },
       "mrr": {
-        "MRR@1": 0.93,
-        "MRR@3": 0.9616666666666666,
-        "MRR@5": 0.9616666666666666,
-        "MRR@10": 0.9616666666666666
+        "MRR@1": 0.95,
+        "MRR@3": 0.975,
+        "MRR@5": 0.975,
+        "MRR@10": 0.975
       },
       "ndcg": {
-        "NDCG@1": 0.93,
-        "NDCG@3": 0.8629959332508739,
-        "NDCG@5": 0.9081098584316439,
-        "NDCG@10": 0.9246620815361888
+        "NDCG@1": 0.95,
+        "NDCG@3": 0.9379581183722282,
+        "NDCG@5": 0.964364930629487,
+        "NDCG@10": 0.964364930629487
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.05,
+        "answer_f1": 0.24259345186976766,
+        "answer_precision": 0.16312953472396197,
+        "answer_recall": 0.7958333333333334,
+        "supporting_fact_em": 0.0,
+        "supporting_fact_f1": 0.25634688850051296,
+        "supporting_fact_precision": 0.1483838818896364,
+        "supporting_fact_recall": 1.0,
+        "joint_em": 0.0,
+        "joint_f1": 0.04650533054176838,
+        "joint_precision": 0.024983466119214544,
+        "joint_recall": 0.7958333333333334
       }
     },
     {
       "dataset": "hotpotqa_distractor",
-      "chunking_mode": "hierarchical",
+      "chunking_mode": "early",
       "chunker": "recursive",
       "retriever": "bm25",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 1040,
-      "started_at": "2026-02-13T02:34:43.818660+00:00",
-      "finished_at": "2026-02-13T02:34:50.158755+00:00",
-      "duration_seconds": 6.34,
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 215,
+      "started_at": "2026-02-14T04:52:26.266343+00:00",
+      "finished_at": "2026-02-14T04:52:41.874152+00:00",
+      "duration_seconds": 15.61,
       "recall": {
-        "Recall@1": 0.39,
+        "Recall@1": 0.35,
         "Recall@3": 0.65,
-        "Recall@5": 0.755,
-        "Recall@10": 0.92
+        "Recall@5": 0.75,
+        "Recall@10": 0.95
       },
       "mrr": {
-        "MRR@1": 0.78,
-        "MRR@3": 0.8449999999999998,
-        "MRR@5": 0.8549999999999998,
-        "MRR@10": 0.8590952380952379
+        "MRR@1": 0.7,
+        "MRR@3": 0.7416666666666667,
+        "MRR@5": 0.7791666666666667,
+        "MRR@10": 0.7847222222222222
       },
       "ndcg": {
-        "NDCG@1": 0.78,
-        "NDCG@3": 0.6673763884912476,
-        "NDCG@5": 0.7209497655452608,
-        "NDCG@10": 0.7868388759697942
+        "NDCG@1": 0.7,
+        "NDCG@3": 0.6452588771061833,
+        "NDCG@5": 0.6967289811305368,
+        "NDCG@10": 0.7733926115689581
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.1,
+        "answer_f1": 0.22429576607208182,
+        "answer_precision": 0.1721638900315371,
+        "answer_recall": 0.6583333333333334,
+        "supporting_fact_em": 0.0,
+        "supporting_fact_f1": 0.21262523072790276,
+        "supporting_fact_precision": 0.12582263439461583,
+        "supporting_fact_recall": 0.7583333333333333,
+        "joint_em": 0.0,
+        "joint_f1": 0.05311042029608095,
+        "joint_precision": 0.030246207400675844,
+        "joint_recall": 0.5604166666666667
       }
     },
     {
       "dataset": "hotpotqa_distractor",
-      "chunking_mode": "hierarchical",
+      "chunking_mode": "early",
       "chunker": "semantic",
       "retriever": "sbert",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 3374,
-      "started_at": "2026-02-13T02:34:50.159538+00:00",
-      "finished_at": "2026-02-13T02:35:16.776238+00:00",
-      "duration_seconds": 26.619,
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 832,
+      "started_at": "2026-02-14T04:52:41.874395+00:00",
+      "finished_at": "2026-02-14T04:53:01.320283+00:00",
+      "duration_seconds": 19.446,
       "recall": {
-        "Recall@1": 0.395,
-        "Recall@3": 0.645,
-        "Recall@5": 0.735,
+        "Recall@1": 0.425,
+        "Recall@3": 0.825,
+        "Recall@5": 0.875,
+        "Recall@10": 0.9
+      },
+      "mrr": {
+        "MRR@1": 0.85,
+        "MRR@3": 0.9166666666666666,
+        "MRR@5": 0.9166666666666666,
+        "MRR@10": 0.9166666666666666
+      },
+      "ndcg": {
+        "NDCG@1": 0.85,
+        "NDCG@3": 0.8065735963827292,
+        "NDCG@5": 0.8316368881498235,
+        "NDCG@10": 0.841856008029248
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.0,
+        "answer_f1": 0.1625795257374205,
+        "answer_precision": 0.09631005024387376,
+        "answer_recall": 0.5958333333333333,
+        "supporting_fact_em": 0.0,
+        "supporting_fact_f1": 0.41081612831612835,
+        "supporting_fact_precision": 0.28519841269841273,
+        "supporting_fact_recall": 0.7791666666666667,
+        "joint_em": 0.0,
+        "joint_f1": 0.05541002954205496,
+        "joint_precision": 0.029587945687210394,
+        "joint_recall": 0.5104166666666667
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "early",
+      "chunker": "semantic",
+      "retriever": "e5",
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 832,
+      "started_at": "2026-02-14T04:53:01.320796+00:00",
+      "finished_at": "2026-02-14T04:53:26.593330+00:00",
+      "duration_seconds": 25.274,
+      "recall": {
+        "Recall@1": 0.5,
+        "Recall@3": 0.875,
+        "Recall@5": 0.975,
+        "Recall@10": 1.0
+      },
+      "mrr": {
+        "MRR@1": 1.0,
+        "MRR@3": 1.0,
+        "MRR@5": 1.0,
+        "MRR@10": 1.0
+      },
+      "ndcg": {
+        "NDCG@1": 1.0,
+        "NDCG@3": 0.8952588771061833,
+        "NDCG@5": 0.9467289811305367,
+        "NDCG@10": 0.9576493529714449
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.1,
+        "answer_f1": 0.29107576633892424,
+        "answer_precision": 0.21296069126951472,
+        "answer_recall": 0.7958333333333334,
+        "supporting_fact_em": 0.05,
+        "supporting_fact_f1": 0.4979040404040404,
+        "supporting_fact_precision": 0.371547619047619,
+        "supporting_fact_recall": 0.8375,
+        "joint_em": 0.0,
+        "joint_f1": 0.12465978291493587,
+        "joint_precision": 0.0791869398108894,
+        "joint_recall": 0.6854166666666667
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "early",
+      "chunker": "semantic",
+      "retriever": "bm25",
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 832,
+      "started_at": "2026-02-14T04:53:26.593755+00:00",
+      "finished_at": "2026-02-14T04:53:43.096736+00:00",
+      "duration_seconds": 16.505,
+      "recall": {
+        "Recall@1": 0.35,
+        "Recall@3": 0.675,
+        "Recall@5": 0.75,
         "Recall@10": 0.825
       },
       "mrr": {
-        "MRR@1": 0.79,
-        "MRR@3": 0.8566666666666665,
-        "MRR@5": 0.8676666666666665,
-        "MRR@10": 0.8676666666666665
+        "MRR@1": 0.7,
+        "MRR@3": 0.7583333333333333,
+        "MRR@5": 0.7708333333333333,
+        "MRR@10": 0.7791666666666666
       },
       "ndcg": {
-        "NDCG@1": 0.79,
-        "NDCG@3": 0.6641652200571753,
-        "NDCG@5": 0.7092791452379446,
-        "NDCG@10": 0.7452155465421861
+        "NDCG@1": 0.7,
+        "NDCG@3": 0.668615478010501,
+        "NDCG@5": 0.7068821759062248,
+        "NDCG@10": 0.7389420394674656
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.05,
+        "answer_f1": 0.18372908524224313,
+        "answer_precision": 0.12767373965903378,
+        "answer_recall": 0.5958333333333334,
+        "supporting_fact_em": 0.05,
+        "supporting_fact_f1": 0.3587698412698413,
+        "supporting_fact_precision": 0.2653571428571428,
+        "supporting_fact_recall": 0.6208333333333333,
+        "joint_em": 0.0,
+        "joint_f1": 0.07992603482987909,
+        "joint_precision": 0.04821388225064697,
+        "joint_recall": 0.4854166666666666
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "early",
+      "chunker": "late_token_pool",
+      "retriever": "sbert",
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 237,
+      "started_at": "2026-02-14T04:53:43.097085+00:00",
+      "finished_at": "2026-02-14T04:53:59.737545+00:00",
+      "duration_seconds": 16.64,
+      "recall": {
+        "Recall@1": 0.45,
+        "Recall@3": 0.775,
+        "Recall@5": 0.85,
+        "Recall@10": 0.975
+      },
+      "mrr": {
+        "MRR@1": 0.9,
+        "MRR@3": 0.95,
+        "MRR@5": 0.95,
+        "MRR@10": 0.95
+      },
+      "ndcg": {
+        "NDCG@1": 0.9,
+        "NDCG@3": 0.7992728376487739,
+        "NDCG@5": 0.836196015054333,
+        "NDCG@10": 0.8893953703359063
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.0,
+        "answer_f1": 0.1580997657313447,
+        "answer_precision": 0.09311446809124826,
+        "answer_recall": 0.6208333333333333,
+        "supporting_fact_em": 0.0,
+        "supporting_fact_f1": 0.19517701141432467,
+        "supporting_fact_precision": 0.11298749624988016,
+        "supporting_fact_recall": 0.7750000000000001,
+        "joint_em": 0.0,
+        "joint_f1": 0.02267406669740764,
+        "joint_precision": 0.011664536149387983,
+        "joint_recall": 0.5354166666666667
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "early",
+      "chunker": "late_token_pool",
+      "retriever": "e5",
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 240,
+      "started_at": "2026-02-14T04:53:59.744490+00:00",
+      "finished_at": "2026-02-14T04:54:19.150700+00:00",
+      "duration_seconds": 19.409,
+      "recall": {
+        "Recall@1": 0.475,
+        "Recall@3": 0.95,
+        "Recall@5": 1.0,
+        "Recall@10": 1.0
+      },
+      "mrr": {
+        "MRR@1": 0.95,
+        "MRR@3": 0.975,
+        "MRR@5": 0.975,
+        "MRR@10": 0.975
+      },
+      "ndcg": {
+        "NDCG@1": 0.95,
+        "NDCG@3": 0.9379581183722282,
+        "NDCG@5": 0.964364930629487,
+        "NDCG@10": 0.964364930629487
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.0,
+        "answer_f1": 0.2054288255604045,
+        "answer_precision": 0.12097224756667482,
+        "answer_recall": 0.7583333333333334,
+        "supporting_fact_em": 0.0,
+        "supporting_fact_f1": 0.26410361551073624,
+        "supporting_fact_precision": 0.15405127658644283,
+        "supporting_fact_recall": 0.975,
+        "joint_em": 0.0,
+        "joint_f1": 0.035628988152501324,
+        "joint_precision": 0.018332974361335984,
+        "joint_recall": 0.7333333333333334
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "early",
+      "chunker": "late_token_pool",
+      "retriever": "bm25",
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 237,
+      "started_at": "2026-02-14T04:54:19.158870+00:00",
+      "finished_at": "2026-02-14T04:54:36.515617+00:00",
+      "duration_seconds": 17.358,
+      "recall": {
+        "Recall@1": 0.35,
+        "Recall@3": 0.625,
+        "Recall@5": 0.75,
+        "Recall@10": 0.9
+      },
+      "mrr": {
+        "MRR@1": 0.7,
+        "MRR@3": 0.7416666666666667,
+        "MRR@5": 0.7791666666666667,
+        "MRR@10": 0.7847222222222222
+      },
+      "ndcg": {
+        "NDCG@1": 0.7,
+        "NDCG@3": 0.6299301972870468,
+        "NDCG@5": 0.6946037074400297,
+        "NDCG@10": 0.7527340533583852
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.0,
+        "answer_f1": 0.13923080114946448,
+        "answer_precision": 0.08105174645615823,
+        "answer_recall": 0.5833333333333334,
+        "supporting_fact_em": 0.0,
+        "supporting_fact_f1": 0.2114128265743221,
+        "supporting_fact_precision": 0.125249272571254,
+        "supporting_fact_recall": 0.7333333333333333,
+        "joint_em": 0.0,
+        "joint_f1": 0.02526131549623537,
+        "joint_precision": 0.01302260246645399,
+        "joint_recall": 0.5104166666666667
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "hierarchical",
+      "chunker": "token",
+      "retriever": "sbert",
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 101,
+      "started_at": "2026-02-14T04:54:43.464886+00:00",
+      "finished_at": "2026-02-14T04:54:59.837058+00:00",
+      "duration_seconds": 16.372,
+      "recall": {
+        "Recall@1": 0.475,
+        "Recall@3": 0.8,
+        "Recall@5": 0.85,
+        "Recall@10": 0.85
+      },
+      "mrr": {
+        "MRR@1": 0.95,
+        "MRR@3": 0.975,
+        "MRR@5": 0.975,
+        "MRR@10": 0.975
+      },
+      "ndcg": {
+        "NDCG@1": 0.95,
+        "NDCG@3": 0.8138743551166844,
+        "NDCG@5": 0.837594126393614,
+        "NDCG@10": 0.837594126393614
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.0,
+        "answer_f1": 0.17404474180789972,
+        "answer_precision": 0.10271870372489567,
+        "answer_recall": 0.6458333333333333,
+        "supporting_fact_em": 0.0,
+        "supporting_fact_f1": 0.20522320940950634,
+        "supporting_fact_precision": 0.11838042188812814,
+        "supporting_fact_recall": 0.8333333333333334,
+        "joint_em": 0.0,
+        "joint_f1": 0.02565534888989749,
+        "joint_precision": 0.01316383574789227,
+        "joint_recall": 0.5979166666666667
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "hierarchical",
+      "chunker": "token",
+      "retriever": "e5",
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 99,
+      "started_at": "2026-02-14T04:54:59.837909+00:00",
+      "finished_at": "2026-02-14T04:55:20.131696+00:00",
+      "duration_seconds": 20.296,
+      "recall": {
+        "Recall@1": 0.475,
+        "Recall@3": 0.95,
+        "Recall@5": 1.0,
+        "Recall@10": 1.0
+      },
+      "mrr": {
+        "MRR@1": 0.95,
+        "MRR@3": 0.975,
+        "MRR@5": 0.975,
+        "MRR@10": 0.975
+      },
+      "ndcg": {
+        "NDCG@1": 0.95,
+        "NDCG@3": 0.9379581183722282,
+        "NDCG@5": 0.9643649306294872,
+        "NDCG@10": 0.9643649306294872
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.05,
+        "answer_f1": 0.2318389480889481,
+        "answer_precision": 0.15608577456255474,
+        "answer_recall": 0.7958333333333334,
+        "supporting_fact_em": 0.0,
+        "supporting_fact_f1": 0.25683949933795136,
+        "supporting_fact_precision": 0.1487172152229697,
+        "supporting_fact_recall": 1.0,
+        "joint_em": 0.0,
+        "joint_f1": 0.044519705457091927,
+        "joint_precision": 0.02393733148352649,
+        "joint_recall": 0.7958333333333334
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "hierarchical",
+      "chunker": "token",
+      "retriever": "bm25",
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 103,
+      "started_at": "2026-02-14T04:55:20.132003+00:00",
+      "finished_at": "2026-02-14T04:55:33.957679+00:00",
+      "duration_seconds": 13.826,
+      "recall": {
+        "Recall@1": 0.35,
+        "Recall@3": 0.6,
+        "Recall@5": 0.75,
+        "Recall@10": 0.75
+      },
+      "mrr": {
+        "MRR@1": 0.7,
+        "MRR@3": 0.7416666666666667,
+        "MRR@5": 0.7766666666666666,
+        "MRR@10": 0.7766666666666666
+      },
+      "ndcg": {
+        "NDCG@1": 0.7,
+        "NDCG@3": 0.6065735963827292,
+        "NDCG@5": 0.6804199511938476,
+        "NDCG@10": 0.6804199511938476
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.05,
+        "answer_f1": 0.1871569792072215,
+        "answer_precision": 0.1296657223495459,
+        "answer_recall": 0.6583333333333334,
+        "supporting_fact_em": 0.0,
+        "supporting_fact_f1": 0.21417954134103687,
+        "supporting_fact_precision": 0.12678040088441891,
+        "supporting_fact_recall": 0.7583333333333333,
+        "joint_em": 0.0,
+        "joint_f1": 0.03975541718294466,
+        "joint_precision": 0.022091245082989742,
+        "joint_recall": 0.5604166666666667
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "hierarchical",
+      "chunker": "sentence",
+      "retriever": "sbert",
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 375,
+      "started_at": "2026-02-14T04:55:33.957933+00:00",
+      "finished_at": "2026-02-14T04:55:47.714282+00:00",
+      "duration_seconds": 13.758,
+      "recall": {
+        "Recall@1": 0.425,
+        "Recall@3": 0.75,
+        "Recall@5": 0.85,
+        "Recall@10": 0.85
+      },
+      "mrr": {
+        "MRR@1": 0.85,
+        "MRR@3": 0.9,
+        "MRR@5": 0.9125,
+        "MRR@10": 0.9125
+      },
+      "ndcg": {
+        "NDCG@1": 0.85,
+        "NDCG@3": 0.7646015174679104,
+        "NDCG@5": 0.814728101002099,
+        "NDCG@10": 0.814728101002099
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.05,
+        "answer_f1": 0.2115668453082641,
+        "answer_precision": 0.14832060096765978,
+        "answer_recall": 0.5958333333333333,
+        "supporting_fact_em": 0.0,
+        "supporting_fact_f1": 0.41412698412698407,
+        "supporting_fact_precision": 0.3217857142857143,
+        "supporting_fact_recall": 0.6341666666666667,
+        "joint_em": 0.0,
+        "joint_f1": 0.08852536761924146,
+        "joint_precision": 0.060124404307177415,
+        "joint_recall": 0.4404166666666667
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "hierarchical",
+      "chunker": "sentence",
+      "retriever": "e5",
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 347,
+      "started_at": "2026-02-14T04:55:47.714953+00:00",
+      "finished_at": "2026-02-14T04:56:05.458832+00:00",
+      "duration_seconds": 17.746,
+      "recall": {
+        "Recall@1": 0.5,
+        "Recall@3": 0.9,
+        "Recall@5": 1.0,
+        "Recall@10": 1.0
+      },
+      "mrr": {
+        "MRR@1": 1.0,
+        "MRR@3": 1.0,
+        "MRR@5": 1.0,
+        "MRR@10": 1.0
+      },
+      "ndcg": {
+        "NDCG@1": 1.0,
+        "NDCG@3": 0.906573596382729,
+        "NDCG@5": 0.9580437004070825,
+        "NDCG@10": 0.9580437004070825
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.15,
+        "answer_f1": 0.2718369496001075,
+        "answer_precision": 0.2207495119259825,
+        "answer_recall": 0.6458333333333334,
+        "supporting_fact_em": 0.0,
+        "supporting_fact_f1": 0.4621031746031746,
+        "supporting_fact_precision": 0.35845238095238097,
+        "supporting_fact_recall": 0.6966666666666665,
+        "joint_em": 0.0,
+        "joint_f1": 0.13725367570438238,
+        "joint_precision": 0.09831458340912122,
+        "joint_recall": 0.5216666666666667
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "hierarchical",
+      "chunker": "sentence",
+      "retriever": "bm25",
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 361,
+      "started_at": "2026-02-14T04:56:05.459124+00:00",
+      "finished_at": "2026-02-14T04:56:16.563822+00:00",
+      "duration_seconds": 11.105,
+      "recall": {
+        "Recall@1": 0.275,
+        "Recall@3": 0.55,
+        "Recall@5": 0.75,
+        "Recall@10": 0.75
+      },
+      "mrr": {
+        "MRR@1": 0.55,
+        "MRR@3": 0.6333333333333334,
+        "MRR@5": 0.6808333333333333,
+        "MRR@10": 0.6808333333333333
+      },
+      "ndcg": {
+        "NDCG@1": 0.55,
+        "NDCG@3": 0.5379581183722281,
+        "NDCG@5": 0.6382112854406056,
+        "NDCG@10": 0.6382112854406056
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.05,
+        "answer_f1": 0.14914283815599605,
+        "answer_precision": 0.10691616390145804,
+        "answer_recall": 0.4625,
+        "supporting_fact_em": 0.0,
+        "supporting_fact_f1": 0.3442857142857142,
+        "supporting_fact_precision": 0.27,
+        "supporting_fact_recall": 0.5008333333333332,
+        "joint_em": 0.0,
+        "joint_f1": 0.07772639957269593,
+        "joint_precision": 0.05208270487682252,
+        "joint_recall": 0.29874999999999996
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "hierarchical",
+      "chunker": "recursive",
+      "retriever": "sbert",
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 98,
+      "started_at": "2026-02-14T04:56:16.564565+00:00",
+      "finished_at": "2026-02-14T04:56:31.740295+00:00",
+      "duration_seconds": 15.176,
+      "recall": {
+        "Recall@1": 0.475,
+        "Recall@3": 0.8,
+        "Recall@5": 0.85,
+        "Recall@10": 0.85
+      },
+      "mrr": {
+        "MRR@1": 0.95,
+        "MRR@3": 0.975,
+        "MRR@5": 0.975,
+        "MRR@10": 0.975
+      },
+      "ndcg": {
+        "NDCG@1": 0.95,
+        "NDCG@3": 0.8138743551166844,
+        "NDCG@5": 0.837594126393614,
+        "NDCG@10": 0.837594126393614
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.0,
+        "answer_f1": 0.16272055271197147,
+        "answer_precision": 0.09540338015957212,
+        "answer_recall": 0.6458333333333333,
+        "supporting_fact_em": 0.0,
+        "supporting_fact_f1": 0.20761782766870937,
+        "supporting_fact_precision": 0.12078741273010354,
+        "supporting_fact_recall": 0.8333333333333334,
+        "joint_em": 0.0,
+        "joint_f1": 0.02411179732236251,
+        "joint_precision": 0.01234781663274731,
+        "joint_recall": 0.5979166666666667
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "hierarchical",
+      "chunker": "recursive",
+      "retriever": "e5",
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 98,
+      "started_at": "2026-02-14T04:56:31.740999+00:00",
+      "finished_at": "2026-02-14T04:56:49.385045+00:00",
+      "duration_seconds": 17.646,
+      "recall": {
+        "Recall@1": 0.475,
+        "Recall@3": 0.95,
+        "Recall@5": 1.0,
+        "Recall@10": 1.0
+      },
+      "mrr": {
+        "MRR@1": 0.95,
+        "MRR@3": 0.975,
+        "MRR@5": 0.975,
+        "MRR@10": 0.975
+      },
+      "ndcg": {
+        "NDCG@1": 0.95,
+        "NDCG@3": 0.9379581183722282,
+        "NDCG@5": 0.964364930629487,
+        "NDCG@10": 0.964364930629487
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.05,
+        "answer_f1": 0.24509345186976766,
+        "answer_precision": 0.16471683631126355,
+        "answer_recall": 0.7958333333333334,
+        "supporting_fact_em": 0.0,
+        "supporting_fact_f1": 0.25634688850051296,
+        "supporting_fact_precision": 0.1483838818896364,
+        "supporting_fact_recall": 1.0,
+        "joint_em": 0.0,
+        "joint_f1": 0.046867900523106694,
+        "joint_precision": 0.025170207482426495,
+        "joint_recall": 0.7958333333333334
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "hierarchical",
+      "chunker": "recursive",
+      "retriever": "bm25",
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 101,
+      "started_at": "2026-02-14T04:56:49.385403+00:00",
+      "finished_at": "2026-02-14T04:57:03.198489+00:00",
+      "duration_seconds": 13.813,
+      "recall": {
+        "Recall@1": 0.35,
+        "Recall@3": 0.625,
+        "Recall@5": 0.75,
+        "Recall@10": 0.75
+      },
+      "mrr": {
+        "MRR@1": 0.7,
+        "MRR@3": 0.7583333333333333,
+        "MRR@5": 0.7808333333333334,
+        "MRR@10": 0.7808333333333334
+      },
+      "ndcg": {
+        "NDCG@1": 0.7,
+        "NDCG@3": 0.6219022762018657,
+        "NDCG@5": 0.6825452248843545,
+        "NDCG@10": 0.6825452248843545
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.1,
+        "answer_f1": 0.22310821488453064,
+        "answer_precision": 0.17137120318621865,
+        "answer_recall": 0.6583333333333334,
+        "supporting_fact_em": 0.0,
+        "supporting_fact_f1": 0.21097319213468765,
+        "supporting_fact_precision": 0.12462361119559262,
+        "supporting_fact_recall": 0.7583333333333333,
+        "joint_em": 0.0,
+        "joint_f1": 0.04976831932016133,
+        "joint_precision": 0.028061356221395613,
+        "joint_recall": 0.5604166666666667
+      }
+    },
+    {
+      "dataset": "hotpotqa_distractor",
+      "chunking_mode": "hierarchical",
+      "chunker": "semantic",
+      "retriever": "sbert",
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 371,
+      "started_at": "2026-02-14T04:57:03.198787+00:00",
+      "finished_at": "2026-02-14T04:57:18.253730+00:00",
+      "duration_seconds": 15.057,
+      "recall": {
+        "Recall@1": 0.425,
+        "Recall@3": 0.8,
+        "Recall@5": 0.85,
+        "Recall@10": 0.85
+      },
+      "mrr": {
+        "MRR@1": 0.85,
+        "MRR@3": 0.9166666666666666,
+        "MRR@5": 0.9166666666666666,
+        "MRR@10": 0.9166666666666666
+      },
+      "ndcg": {
+        "NDCG@1": 0.85,
+        "NDCG@3": 0.7912449165635926,
+        "NDCG@5": 0.8149646878405223,
+        "NDCG@10": 0.8149646878405223
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.0,
+        "answer_f1": 0.1527424330055909,
+        "answer_precision": 0.09072292903175255,
+        "answer_recall": 0.5458333333333333,
+        "supporting_fact_em": 0.0,
+        "supporting_fact_f1": 0.4083674658674659,
+        "supporting_fact_precision": 0.28573412698412703,
+        "supporting_fact_recall": 0.7625000000000001,
+        "joint_em": 0.0,
+        "joint_f1": 0.05424834093868245,
+        "joint_precision": 0.029063053912318615,
+        "joint_recall": 0.4854166666666667
       }
     },
     {
@@ -866,29 +1255,44 @@
       "chunking_mode": "hierarchical",
       "chunker": "semantic",
       "retriever": "e5",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 3810,
-      "started_at": "2026-02-13T02:35:16.778530+00:00",
-      "finished_at": "2026-02-13T02:36:20.430132+00:00",
-      "duration_seconds": 63.656,
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 344,
+      "started_at": "2026-02-14T04:57:18.254603+00:00",
+      "finished_at": "2026-02-14T04:57:38.449328+00:00",
+      "duration_seconds": 20.197,
       "recall": {
-        "Recall@1": 0.48,
-        "Recall@3": 0.85,
-        "Recall@5": 0.935,
-        "Recall@10": 0.985
+        "Recall@1": 0.5,
+        "Recall@3": 0.875,
+        "Recall@5": 1.0,
+        "Recall@10": 1.0
       },
       "mrr": {
-        "MRR@1": 0.96,
-        "MRR@3": 0.9733333333333333,
-        "MRR@5": 0.9758333333333333,
-        "MRR@10": 0.9758333333333333
+        "MRR@1": 1.0,
+        "MRR@3": 1.0,
+        "MRR@5": 1.0,
+        "MRR@10": 1.0
       },
       "ndcg": {
-        "NDCG@1": 0.96,
-        "NDCG@3": 0.8604421244550742,
-        "NDCG@5": 0.9031840725081512,
-        "NDCG@10": 0.9232297425401985
+        "NDCG@1": 1.0,
+        "NDCG@3": 0.8952588771061833,
+        "NDCG@5": 0.9599323872591663,
+        "NDCG@10": 0.9599323872591663
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.1,
+        "answer_f1": 0.277742433005591,
+        "answer_precision": 0.20526838357720711,
+        "answer_recall": 0.7458333333333333,
+        "supporting_fact_em": 0.05,
+        "supporting_fact_f1": 0.4979040404040404,
+        "supporting_fact_precision": 0.371547619047619,
+        "supporting_fact_recall": 0.8375,
+        "joint_em": 0.0,
+        "joint_f1": 0.13339732444317504,
+        "joint_precision": 0.09034078596473555,
+        "joint_recall": 0.6604166666666667
       }
     },
     {
@@ -896,29 +1300,44 @@
       "chunking_mode": "hierarchical",
       "chunker": "semantic",
       "retriever": "bm25",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 4153,
-      "started_at": "2026-02-13T02:36:20.432322+00:00",
-      "finished_at": "2026-02-13T02:36:49.432553+00:00",
-      "duration_seconds": 29.003,
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 356,
+      "started_at": "2026-02-14T04:57:38.449677+00:00",
+      "finished_at": "2026-02-14T04:57:52.152460+00:00",
+      "duration_seconds": 13.703,
       "recall": {
-        "Recall@1": 0.405,
-        "Recall@3": 0.68,
-        "Recall@5": 0.78,
-        "Recall@10": 0.905
+        "Recall@1": 0.35,
+        "Recall@3": 0.65,
+        "Recall@5": 0.75,
+        "Recall@10": 0.75
       },
       "mrr": {
-        "MRR@1": 0.81,
-        "MRR@3": 0.8750000000000001,
-        "MRR@5": 0.8795000000000001,
-        "MRR@10": 0.8811666666666667
+        "MRR@1": 0.7,
+        "MRR@3": 0.7583333333333334,
+        "MRR@5": 0.7808333333333334,
+        "MRR@10": 0.7808333333333334
       },
       "ndcg": {
-        "NDCG@1": 0.81,
-        "NDCG@3": 0.6933624279486569,
-        "NDCG@5": 0.7440264196789115,
-        "NDCG@10": 0.7951990303318044
+        "NDCG@1": 0.7,
+        "NDCG@3": 0.6452588771061833,
+        "NDCG@5": 0.695385460640372,
+        "NDCG@10": 0.695385460640372
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.05,
+        "answer_f1": 0.15740050440279274,
+        "answer_precision": 0.11253921216382519,
+        "answer_recall": 0.4958333333333333,
+        "supporting_fact_em": 0.05,
+        "supporting_fact_f1": 0.34711038961038965,
+        "supporting_fact_precision": 0.25684523809523807,
+        "supporting_fact_recall": 0.6041666666666666,
+        "joint_em": 0.0,
+        "joint_f1": 0.0741740862065943,
+        "joint_precision": 0.04514759520951471,
+        "joint_recall": 0.4354166666666666
       }
     },
     {
@@ -926,29 +1345,44 @@
       "chunking_mode": "hierarchical",
       "chunker": "late_token_pool",
       "retriever": "sbert",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 941,
-      "started_at": "2026-02-13T02:36:49.433660+00:00",
-      "finished_at": "2026-02-13T02:37:00.391483+00:00",
-      "duration_seconds": 10.958,
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 105,
+      "started_at": "2026-02-14T04:57:52.153296+00:00",
+      "finished_at": "2026-02-14T04:58:06.665047+00:00",
+      "duration_seconds": 14.516,
       "recall": {
-        "Recall@1": 0.415,
-        "Recall@3": 0.605,
-        "Recall@5": 0.725,
-        "Recall@10": 0.83
+        "Recall@1": 0.45,
+        "Recall@3": 0.775,
+        "Recall@5": 0.85,
+        "Recall@10": 0.85
       },
       "mrr": {
-        "MRR@1": 0.83,
-        "MRR@3": 0.8733333333333333,
-        "MRR@5": 0.8873333333333333,
-        "MRR@10": 0.8873333333333333
+        "MRR@1": 0.9,
+        "MRR@3": 0.95,
+        "MRR@5": 0.95,
+        "MRR@10": 0.95
       },
       "ndcg": {
-        "NDCG@1": 0.83,
-        "NDCG@3": 0.6486911077677937,
-        "NDCG@5": 0.7093804162048853,
-        "NDCG@10": 0.751185360100586
+        "NDCG@1": 0.9,
+        "NDCG@3": 0.7992728376487739,
+        "NDCG@5": 0.8361960150543333,
+        "NDCG@10": 0.8361960150543333
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.0,
+        "answer_f1": 0.17226643239801137,
+        "answer_precision": 0.10152716650394669,
+        "answer_recall": 0.6708333333333333,
+        "supporting_fact_em": 0.0,
+        "supporting_fact_f1": 0.20357226833132072,
+        "supporting_fact_precision": 0.11783657546966872,
+        "supporting_fact_recall": 0.8083333333333333,
+        "joint_em": 0.0,
+        "joint_f1": 0.025275594306178907,
+        "joint_precision": 0.01300307520286656,
+        "joint_recall": 0.5854166666666667
       }
     },
     {
@@ -956,29 +1390,44 @@
       "chunking_mode": "hierarchical",
       "chunker": "late_token_pool",
       "retriever": "e5",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 1064,
-      "started_at": "2026-02-13T02:37:00.399905+00:00",
-      "finished_at": "2026-02-13T02:37:26.135458+00:00",
-      "duration_seconds": 25.739,
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 104,
+      "started_at": "2026-02-14T04:58:06.669179+00:00",
+      "finished_at": "2026-02-14T04:58:26.022853+00:00",
+      "duration_seconds": 19.354,
       "recall": {
-        "Recall@1": 0.465,
-        "Recall@3": 0.86,
-        "Recall@5": 0.945,
-        "Recall@10": 0.99
+        "Recall@1": 0.475,
+        "Recall@3": 0.95,
+        "Recall@5": 1.0,
+        "Recall@10": 1.0
       },
       "mrr": {
-        "MRR@1": 0.93,
-        "MRR@3": 0.9616666666666666,
-        "MRR@5": 0.9616666666666666,
-        "MRR@10": 0.9616666666666666
+        "MRR@1": 0.95,
+        "MRR@3": 0.975,
+        "MRR@5": 0.975,
+        "MRR@10": 0.975
       },
       "ndcg": {
-        "NDCG@1": 0.93,
-        "NDCG@3": 0.8621931411423556,
-        "NDCG@5": 0.9054724973914986,
-        "NDCG@10": 0.924099234924513
+        "NDCG@1": 0.95,
+        "NDCG@3": 0.9379581183722282,
+        "NDCG@5": 0.964364930629487,
+        "NDCG@10": 0.964364930629487
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.0,
+        "answer_f1": 0.20818676206834102,
+        "answer_precision": 0.12325516073194091,
+        "answer_recall": 0.7583333333333334,
+        "supporting_fact_em": 0.0,
+        "supporting_fact_f1": 0.26357729972126254,
+        "supporting_fact_precision": 0.1537244792008219,
+        "supporting_fact_recall": 0.975,
+        "joint_em": 0.0,
+        "joint_f1": 0.035934739046487515,
+        "joint_precision": 0.018496510363972336,
+        "joint_recall": 0.7333333333333334
       }
     },
     {
@@ -986,29 +1435,44 @@
       "chunking_mode": "hierarchical",
       "chunker": "late_token_pool",
       "retriever": "bm25",
-      "num_queries": 100,
-      "num_docs": 1000,
-      "num_chunks": 1145,
-      "started_at": "2026-02-13T02:37:26.148457+00:00",
-      "finished_at": "2026-02-13T02:37:40.655868+00:00",
-      "duration_seconds": 14.51,
+      "num_queries": 20,
+      "num_docs": 200,
+      "num_chunks": 108,
+      "started_at": "2026-02-14T04:58:26.026962+00:00",
+      "finished_at": "2026-02-14T04:58:41.718359+00:00",
+      "duration_seconds": 15.693,
       "recall": {
-        "Recall@1": 0.39,
-        "Recall@3": 0.655,
-        "Recall@5": 0.77,
-        "Recall@10": 0.915
+        "Recall@1": 0.35,
+        "Recall@3": 0.625,
+        "Recall@5": 0.75,
+        "Recall@10": 0.75
       },
       "mrr": {
-        "MRR@1": 0.78,
-        "MRR@3": 0.848333333333333,
-        "MRR@5": 0.855833333333333,
-        "MRR@10": 0.8595119047619044
+        "MRR@1": 0.7,
+        "MRR@3": 0.7583333333333333,
+        "MRR@5": 0.7808333333333334,
+        "MRR@10": 0.7808333333333334
       },
       "ndcg": {
-        "NDCG@1": 0.78,
-        "NDCG@3": 0.671244916563593,
-        "NDCG@5": 0.7287561355788934,
-        "NDCG@10": 0.7855344352905572
+        "NDCG@1": 0.7,
+        "NDCG@3": 0.6219022762018657,
+        "NDCG@5": 0.6825452248843545,
+        "NDCG@10": 0.6825452248843545
+      },
+      "hotpot_official_emf1": {
+        "num_scored": 20,
+        "answer_em": 0.05,
+        "answer_f1": 0.1903671647858281,
+        "answer_precision": 0.13180362615540636,
+        "answer_recall": 0.6333333333333334,
+        "supporting_fact_em": 0.0,
+        "supporting_fact_f1": 0.21570788239569372,
+        "supporting_fact_precision": 0.12850324082522224,
+        "supporting_fact_recall": 0.7333333333333333,
+        "joint_em": 0.0,
+        "joint_f1": 0.03229552319956824,
+        "joint_precision": 0.017003072184705665,
+        "joint_recall": 0.5354166666666667
       }
     }
   ]

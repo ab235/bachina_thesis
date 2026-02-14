@@ -5,7 +5,7 @@ set -euo pipefail
 # and merge results into a single JSON file.
 # This script explicitly includes:
 #   chunkers: token, sentence, recursive, semantic, late_token_pool
-#   retrievers: sbert, e5, bm25
+#   retrievers: sbert, e5, bm25 (backed by local bm25s)
 #
 # Usage:
 #   bash scripts/run_hotpot_qasper_early_hierarchical.sh [grid-eval args...]
@@ -60,10 +60,6 @@ echo "Running early chunking grid..."
   --chunking-mode early \
   --chunkers token sentence recursive semantic late_token_pool \
   --retrievers sbert e5 bm25 \
-  --bm25-hostname localhost \
-  --bm25-port 9200 \
-  --bm25-username elastic \
-  --bm25-password "${ES_LOCAL_PASSWORD}" \
   --output "${EARLY_TMP}" \
   "${FORWARD_ARGS[@]}"
 
@@ -72,10 +68,6 @@ echo "Running hierarchical chunking grid..."
   --chunking-mode hierarchical \
   --chunkers token sentence recursive semantic late_token_pool \
   --retrievers sbert e5 bm25 \
-  --bm25-hostname localhost \
-  --bm25-port 9200 \
-  --bm25-username elastic \
-  --bm25-password "${ES_LOCAL_PASSWORD}" \
   --output "${HIERARCHICAL_TMP}" \
   "${FORWARD_ARGS[@]}"
 

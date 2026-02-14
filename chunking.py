@@ -1,4 +1,4 @@
-from typing import Callable, Iterable, List, Optional, Sequence, Any
+from typing import Callable, Dict, Iterable, List, Optional, Sequence, Any, Tuple
 import nltk
 nltk.download('punkt_tab')
 from tqdm import tqdm
@@ -8,6 +8,7 @@ nltk.download("punkt")
 from nltk.tokenize import sent_tokenize, word_tokenize
 from embeddings import embed_texts
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from datatypes import LateChunkData
 
 
 def simple_chunk(text: str, max_chars: int = 1200, overlap: int = 200) -> List[str]:
@@ -247,3 +248,112 @@ def semantic_chunking(
             chunks.append(chunk_text)
 
     return chunks
+
+
+def join_doc(doc: Dict[str, str]) -> str:
+    title = doc.get("title", "") or ""
+    text = doc.get("text", "") or ""
+    return "\n\n".join([x for x in (title, text) if x]).strip()
+
+
+ChunkerFn = Callable[[str, object, Optional[object]], List[str]]
+
+
+def _chunk_token_eval(text: str, args: object, _sentence_embed_fn: Optional[object]) -> List[str]:
+    return token_chunk(text, target_size=args.token_size, overlap=args.overlap)
+
+
+def _chunk_sentence_eval(text: str, _args: object, _sentence_embed_fn: Optional[object]) -> List[str]:
+    return sentence_chunk(text)
+
+
+def _chunk_recursive_eval(text: str, args: object, _sentence_embed_fn: Optional[object]) -> List[str]:
+    return recursive_chunk(
+        text,
+        min_chars=args.min_chars,
+        max_chars=args.max_chars,
+        overlap=args.overlap,
+    )
+
+
+def _chunk_semantic_eval(text: str, args: object, sentence_embed_fn: Optional[object]) -> List[str]:
+    return semantic_chunking(
+        text,
+        max_chars=args.max_chars,
+        overlap=args.overlap,
+        similarity_threshold=args.similarity_threshold,
+        embed_fn=sentence_embed_fn,
+        show_progress=False,
+    )
+
+
+def get_chunker_factory() -> Dict[str, ChunkerFn]:
+    return {
+        "token": _chunk_token_eval,
+        "sentence": _chunk_sentence_eval,
+        "recursive": _chunk_recursive_eval,
+        "semantic": _chunk_semantic_eval,
+    }
+
+
+def chunk_text_for_eval(
+    text: str,
+    chunker: str,
+    args: object,
+    sentence_embed_fn: Optional[object] = None,
+) -> List[str]:
+    chunker_impl = get_chunker_factory().get(chunker)
+    if chunker_impl is None:
+        raise ValueError(f"Unsupported chunker: {chunker}")
+    return chunker_impl(text, args, sentence_embed_fn)
+
+
+def build_late_token_pool_chunks(
+    doc_texts: Dict[str, str],
+    encoder: object,
+    args: object,
+    desc: str,
+) -> LateChunkData:
+    chunk_texts: Dict[str, str] = {}
+    chunk_to_doc: Dict[str, str] = {}
+    chunk_vectors: Dict[str, np.ndarray] = {}
+    truncated_docs = 0
+    for doc_id, joined in tqdm(doc_texts.items(), desc=desc, leave=False):
+        if not joined:
+            continue
+        chunks, vecs, truncated = encoder.build_doc_chunks(
+            joined, target_size=args.token_size, overlap=args.overlap
+        )
+        if truncated:
+            truncated_docs += 1
+        for idx, (chunk_text_value, vec) in enumerate(zip(chunks, vecs)):
+            cid = f"{doc_id}#chunk{idx}"
+            chunk_texts[cid] = chunk_text_value
+            chunk_to_doc[cid] = doc_id
+            chunk_vectors[cid] = vec
+    return LateChunkData(
+        chunk_texts=chunk_texts,
+        chunk_to_doc=chunk_to_doc,
+        chunk_vectors=chunk_vectors,
+        truncated_docs=truncated_docs,
+    )
+
+
+def chunk_corpus_for_eval(
+    corpus: Dict[str, Dict[str, str]],
+    chunker: str,
+    args: object,
+    sentence_embed_fn: Optional[object] = None,
+) -> Tuple[Dict[str, str], Dict[str, str]]:
+    chunk_texts: Dict[str, str] = {}
+    chunk_to_doc: Dict[str, str] = {}
+    for doc_id, doc in tqdm(corpus.items(), desc=f"Chunking ({chunker})", leave=False):
+        joined = join_doc(doc)
+        if not joined:
+            continue
+        chunks = chunk_text_for_eval(joined, chunker=chunker, args=args, sentence_embed_fn=sentence_embed_fn)
+        for i, c in enumerate(chunks):
+            cid = f"{doc_id}#chunk{i}"
+            chunk_texts[cid] = c
+            chunk_to_doc[cid] = doc_id
+    return chunk_texts, chunk_to_doc
