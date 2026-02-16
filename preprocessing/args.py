@@ -72,10 +72,10 @@ def parse_args() -> argparse.Namespace:
     args.answer_recall_k = max(1, int(args.k))
     args.hotpot_support_fact_coverage = True
     args.hotpot_official_emf1 = True
-    args.hotpot_answer_model = "gpt-5.2-chat-latest"
+    args.hotpot_answer_model = "mistral"
     args.hotpot_answer_top_k = max(1, int(args.k))
     args.hotpot_answer_max_queries = int(args.max_queries)
-    args.hotpot_sp_max_facts = 100
+    args.hotpot_sp_max_facts = 60
     args.backend = "sbert"
     args.model = ""
     args.normalize = True

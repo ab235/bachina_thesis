@@ -414,7 +414,13 @@ class LateTokenPoolEncoder:
         )
         return self._encode_ids(ids)
 
-    def build_doc_chunks(self, text: str, target_size: int, overlap: int) -> Tuple[List[str], List[np.ndarray], bool]:
+    def build_doc_chunks(
+        self,
+        text: str,
+        target_size: int,
+        overlap: int,
+        min_size: int = 0,
+    ) -> Tuple[List[str], List[np.ndarray], bool]:
         model_text = f"passage: {text}" if self.use_e5_format else text
         ids = self.tokenizer.encode(model_text, add_special_tokens=False, truncation=False)
         over_model_max = len(ids) > self.max_content_tokens
@@ -424,6 +430,8 @@ class LateTokenPoolEncoder:
             raise ValueError("target_size must be > 0")
         if overlap >= target_size:
             raise ValueError("overlap must be < target_size")
+        if min_size < 0:
+            raise ValueError("min_size must be >= 0")
         token_vecs = self._encode_token_sequence(ids)
         prefix_len = min(len(self._passage_prefix_ids), len(ids)) if self.use_e5_format else 0
         prefix_sum = token_vecs[:prefix_len].sum(axis=0) if prefix_len > 0 else None
@@ -434,6 +442,8 @@ class LateTokenPoolEncoder:
         n = len(ids)
         while i < n:
             j = min(i + target_size, n)
+            if j < n and (n - j) < min_size:
+                j = n
             chunk_ids = ids[i:j]
             chunk_text = self.tokenizer.decode(chunk_ids, skip_special_tokens=True).strip()
             if self.use_e5_format and chunk_text.startswith("passage:"):

@@ -1,4 +1,7 @@
 import os
+import json
+import urllib.error
+import urllib.request
 from typing import Dict, Iterable, List, Optional
 
 from tqdm import tqdm
@@ -26,7 +29,7 @@ def _build_contexts_for_qid(
 
 
 def _generate_one_answer(
-    client: object,
+    ollama_url: str,
     model: str,
     question: str,
     contexts: List[str],
@@ -45,20 +48,33 @@ def _generate_one_answer(
         f"Question: {question}\n\nEvidence:\n{joined}\n\n"
         "Return only the final answer text (one line, max 6 words)."
     )
-    response = client.chat.completions.create(
-        model=model,
-        temperature=1.0,
-        top_p=1.0,
-        presence_penalty=0.0,
-        frequency_penalty=0.0,
-        seed=int(seed),
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
+    payload = {
+        "model": model,
+        "system": system,
+        "prompt": user,
+        "stream": False,
+        "options": {
+            "temperature": 0.0,
+            "top_p": 1.0,
+            "seed": int(seed),
+            "num_predict": 64,
+        },
+    }
+    req = urllib.request.Request(
+        ollama_url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
     )
-    content = response.choices[0].message.content
-    return (content or "").strip()
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.URLError as exc:
+        raise RuntimeError(
+            f"Failed to call Ollama at {ollama_url}. Is `ollama serve` running?"
+        ) from exc
+    content = data.get("response", "")
+    return str(content).strip()
 
 
 def generate_answers_from_top_chunks(
@@ -70,15 +86,8 @@ def generate_answers_from_top_chunks(
     seed: int,
     qids: Optional[Iterable[str]] = None,
 ) -> Dict[str, str]:
-    try:
-        from openai import OpenAI
-    except ModuleNotFoundError as exc:
-        raise RuntimeError("openai package is required for Hotpot answer generation.") from exc
-
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise RuntimeError("OPENAI_API_KEY must be set for Hotpot answer generation.")
-    client = OpenAI(api_key=api_key)
+    ollama_base = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434").rstrip("/")
+    ollama_url = f"{ollama_base}/api/generate"
 
     target_qids = list(qids) if qids is not None else list(queries.keys())
     out: Dict[str, str] = {}
@@ -90,7 +99,7 @@ def generate_answers_from_top_chunks(
             top_k=top_k,
         )
         out[qid] = _generate_one_answer(
-            client=client,
+            ollama_url=ollama_url,
             model=model,
             question=queries.get(qid, ""),
             contexts=contexts,

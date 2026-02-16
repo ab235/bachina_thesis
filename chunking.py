@@ -78,6 +78,48 @@ def token_chunk(
     return chunks
 
 
+def _enforce_min_chunks_by_chars(chunks: List[str], min_chars: int) -> List[str]:
+    if min_chars <= 0:
+        return [c for c in chunks if c and c.strip()]
+    cleaned = [c.strip() for c in chunks if c and c.strip()]
+    if not cleaned:
+        return []
+    out: List[str] = []
+    i = 0
+    while i < len(cleaned):
+        cur = cleaned[i]
+        i += 1
+        while len(cur) < min_chars and i < len(cleaned):
+            cur = f"{cur} {cleaned[i]}".strip()
+            i += 1
+        out.append(cur)
+    if len(out) >= 2 and len(out[-1]) < min_chars:
+        out[-2] = f"{out[-2]} {out[-1]}".strip()
+        out.pop()
+    return out
+
+
+def _enforce_min_chunks_by_tokens(chunks: List[str], min_tokens: int) -> List[str]:
+    if min_tokens <= 0:
+        return [c for c in chunks if c and c.strip()]
+    cleaned = [c.strip() for c in chunks if c and c.strip()]
+    if not cleaned:
+        return []
+    out: List[str] = []
+    i = 0
+    while i < len(cleaned):
+        cur = cleaned[i]
+        i += 1
+        while len(word_tokenize(cur)) < min_tokens and i < len(cleaned):
+            cur = f"{cur} {cleaned[i]}".strip()
+            i += 1
+        out.append(cur)
+    if len(out) >= 2 and len(word_tokenize(out[-1])) < min_tokens:
+        out[-2] = f"{out[-2]} {out[-1]}".strip()
+        out.pop()
+    return out
+
+
 def sentence_chunk(text: str) -> List[str]:
     text = text.strip()
     if not text:
@@ -260,24 +302,29 @@ ChunkerFn = Callable[[str, object, Optional[object]], List[str]]
 
 
 def _chunk_token_eval(text: str, args: object, _sentence_embed_fn: Optional[object]) -> List[str]:
-    return token_chunk(text, target_size=args.token_size, overlap=args.overlap)
+    chunks = token_chunk(text, target_size=args.token_size, overlap=args.overlap)
+    min_tokens = max(1, int(args.token_size) // 2)
+    return _enforce_min_chunks_by_tokens(chunks, min_tokens=min_tokens)
 
 
-def _chunk_sentence_eval(text: str, _args: object, _sentence_embed_fn: Optional[object]) -> List[str]:
-    return sentence_chunk(text)
+def _chunk_sentence_eval(text: str, args: object, _sentence_embed_fn: Optional[object]) -> List[str]:
+    chunks = sentence_chunk(text)
+    min_chars = max(1, int(args.max_chars) // 2)
+    return _enforce_min_chunks_by_chars(chunks, min_chars=min_chars)
 
 
 def _chunk_recursive_eval(text: str, args: object, _sentence_embed_fn: Optional[object]) -> List[str]:
+    min_chars = max(1, int(args.max_chars) // 2)
     return recursive_chunk(
         text,
-        min_chars=args.min_chars,
+        min_chars=min_chars,
         max_chars=args.max_chars,
         overlap=args.overlap,
     )
 
 
 def _chunk_semantic_eval(text: str, args: object, sentence_embed_fn: Optional[object]) -> List[str]:
-    return semantic_chunking(
+    chunks = semantic_chunking(
         text,
         max_chars=args.max_chars,
         overlap=args.overlap,
@@ -285,6 +332,8 @@ def _chunk_semantic_eval(text: str, args: object, sentence_embed_fn: Optional[ob
         embed_fn=sentence_embed_fn,
         show_progress=False,
     )
+    min_chars = max(1, int(args.max_chars) // 2)
+    return _enforce_min_chunks_by_chars(chunks, min_chars=min_chars)
 
 
 def get_chunker_factory() -> Dict[str, ChunkerFn]:
@@ -322,7 +371,10 @@ def build_late_token_pool_chunks(
         if not joined:
             continue
         chunks, vecs, truncated = encoder.build_doc_chunks(
-            joined, target_size=args.token_size, overlap=args.overlap
+            joined,
+            target_size=args.token_size,
+            overlap=args.overlap,
+            min_size=max(1, int(args.token_size) // 2),
         )
         if truncated:
             truncated_docs += 1
