@@ -35,6 +35,7 @@ def main() -> None:
             squad_path=squad_path,
             max_queries=args.max_queries,
             seed=args.seed,
+            keep_all_docs=bool(getattr(args, "squad_keep_all_docs", False)),
         )
         hotpot_gold_facts = {}
         hotpot_doc_sentences = {}

@@ -34,6 +34,7 @@ from config import (
     EVAL_SBERT_MODEL,
     EVAL_SEED,
     EVAL_SIMILARITY_THRESHOLD,
+    EVAL_SQUAD_KEEP_ALL_DOCS,
     EVAL_TOKEN_SIZE,
     EVAL_GPU_ID,
     EVAL_WIKI_CORPUS_PATH,
@@ -80,6 +81,12 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=EVAL_MAX_QUERIES,
         help="Max number of queries to evaluate. Set <=0 to use all queries.",
+    )
+    parser.add_argument(
+        "--squad-keep-all-docs",
+        action="store_true",
+        default=EVAL_SQUAD_KEEP_ALL_DOCS,
+        help="Mode 1 only: keep all SQuAD documents even when sampling queries.",
     )
     parser.add_argument("--batch-size", type=int, default=EVAL_BATCH_SIZE)
     parser.add_argument("--token-size", type=int, default=EVAL_TOKEN_SIZE)

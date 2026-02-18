@@ -21,6 +21,7 @@ def load_squad_v11(
     squad_path: pathlib.Path,
     max_queries: int,
     seed: int,
+    keep_all_docs: bool = False,
 ) -> Tuple[
     Dict[str, Dict[str, str]],
     Dict[str, str],
@@ -105,7 +106,8 @@ def load_squad_v11(
     keep = set(sample_qids(list(queries.keys()), max_queries=max_queries, seed=seed))
     queries = {qid: q for qid, q in queries.items() if qid in keep}
     answers = {qid: a for qid, a in answers.items() if qid in keep}
-    kept_docs = {qid_to_doc[qid] for qid in keep if qid in qid_to_doc}
-    corpus = {did: doc for did, doc in corpus.items() if did in kept_docs}
+    if not keep_all_docs:
+        kept_docs = {qid_to_doc[qid] for qid in keep if qid in qid_to_doc}
+        corpus = {did: doc for did, doc in corpus.items() if did in kept_docs}
 
     return corpus, queries, answers

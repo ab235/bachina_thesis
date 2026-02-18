@@ -55,6 +55,7 @@ EVAL_DATASET_PATH_MODE1 = os.getenv("EVAL_DATASET_PATH_MODE1", "datasets/train-v
 EVAL_DATASET_PATH_MODE2 = os.getenv("EVAL_DATASET_PATH_MODE2", "datasets/hotpot_dev_distractor_v1.json")
 EVAL_DATASET_PATH_MODE3 = os.getenv("EVAL_DATASET_PATH_MODE3", "datasets/hotpot_dev_distractor_v1.json")
 EVAL_WIKI_CORPUS_PATH = os.getenv("EVAL_WIKI_CORPUS_PATH", "datasets/wiki_corpus.json")
+EVAL_SQUAD_KEEP_ALL_DOCS = os.getenv("EVAL_SQUAD_KEEP_ALL_DOCS", "true").lower() == "true"
 EVAL_K = _env_int("EVAL_K", 5)
 EVAL_MAX_QUERIES = _env_int("EVAL_MAX_QUERIES", 0)
 EVAL_BATCH_SIZE = _env_int("EVAL_BATCH_SIZE", 32)
