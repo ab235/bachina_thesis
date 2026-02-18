@@ -540,12 +540,16 @@ def build_result_row(
     finished_at: datetime,
     duration_seconds: float,
     metrics: Dict[str, object],
+    answer_provider: str,
+    generator_model_family: str,
 ) -> Dict[str, object]:
     row: Dict[str, object] = {
         "dataset": dataset_name,
         "chunking_mode": chunking_mode,
         "chunker": chunker,
         "retriever": retriever,
+        "answer_provider": answer_provider,
+        "generator_model_family": generator_model_family,
         "num_queries": num_queries,
         "num_docs": num_docs,
         "num_chunks": num_chunks,
@@ -619,4 +623,6 @@ def evaluate_one(
         finished_at=finished_at,
         duration_seconds=perf_counter() - t0,
         metrics=metrics,
+        answer_provider=str(getattr(args, "answer_provider", "")),
+        generator_model_family=str(getattr(args, "hotpot_answer_model", "")),
     )
