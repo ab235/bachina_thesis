@@ -1,5 +1,8 @@
 import os
 import json
+import socket
+import time
+import logging
 import urllib.error
 import urllib.request
 from typing import Dict, Iterable, List, Optional
@@ -10,6 +13,9 @@ from config import (
     BEDROCK_MISTRAL_MODEL_ID,
     BEDROCK_QWEN_MODEL_ID,
     BEDROCK_REGION,
+    OLLAMA_MAX_RETRIES,
+    OLLAMA_RETRY_BACKOFF_SECONDS,
+    OLLAMA_TIMEOUT_SECONDS,
 )
 
 OLLAMA_MODELS: Dict[str, str] = {
@@ -113,15 +119,26 @@ def _generate_one_answer(
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    try:
-        with urllib.request.urlopen(req, timeout=120) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-    except urllib.error.URLError as exc:
-        raise RuntimeError(
-            f"Failed to call Ollama at {ollama_url}. Is `ollama serve` running?"
-        ) from exc
-    content = data.get("response", "")
-    return str(content).strip()
+    timeout_s = int(OLLAMA_TIMEOUT_SECONDS)
+    max_retries = int(OLLAMA_MAX_RETRIES)
+    retry_backoff_s = float(OLLAMA_RETRY_BACKOFF_SECONDS)
+    attempts = max(1, max_retries + 1)
+    last_exc: Optional[Exception] = None
+    for attempt in range(1, attempts + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout_s) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+            content = data.get("response", "")
+            return str(content).strip()
+        except (urllib.error.URLError, socket.timeout, TimeoutError, json.JSONDecodeError) as exc:
+            last_exc = exc
+            if attempt >= attempts:
+                break
+            time.sleep(retry_backoff_s * attempt)
+    raise RuntimeError(
+        f"Failed to call Ollama at {ollama_url} after {attempts} attempts "
+        f"(timeout={timeout_s}s)."
+    ) from last_exc
 
 
 def _resolve_ollama_model(model_family: str) -> str:
@@ -227,12 +244,17 @@ def generate_answers_from_top_chunks(
                 prompt_style=prompt_style,
             )
         else:
-            out[qid] = _generate_one_answer(
-                ollama_url=ollama_url,
-                model=model,
-                question=queries.get(qid, ""),
-                contexts=contexts,
-                seed=seed,
-                prompt_style=prompt_style,
-            )
+            try:
+                out[qid] = _generate_one_answer(
+                    ollama_url=ollama_url,
+                    model=model,
+                    question=queries.get(qid, ""),
+                    contexts=contexts,
+                    seed=seed,
+                    prompt_style=prompt_style,
+                )
+            except RuntimeError as exc:
+                # Avoid failing an entire shard for a single timed-out answer request.
+                logging.warning("Ollama answer generation failed for qid=%s: %s", qid, exc)
+                out[qid] = "unknown"
     return out
