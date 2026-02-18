@@ -5,6 +5,24 @@ import urllib.request
 from typing import Dict, Iterable, List, Optional
 
 from tqdm import tqdm
+from config import (
+    BEDROCK_LLAMA_MODEL_ID,
+    BEDROCK_MISTRAL_MODEL_ID,
+    BEDROCK_QWEN_MODEL_ID,
+    BEDROCK_REGION,
+)
+
+OLLAMA_MODELS: Dict[str, str] = {
+    "llama": "llama3.1",
+    "mistral": "mistral",
+    "qwen": "qwen2.5",
+}
+
+BEDROCK_MODEL_IDS: Dict[str, str] = {
+    "llama": BEDROCK_LLAMA_MODEL_ID,
+    "mistral": BEDROCK_MISTRAL_MODEL_ID,
+    "qwen": BEDROCK_QWEN_MODEL_ID,
+}
 
 
 
@@ -28,13 +46,7 @@ def _build_contexts_for_qid(
     return contexts
 
 
-def _generate_one_answer(
-    ollama_url: str,
-    model: str,
-    question: str,
-    contexts: List[str],
-    seed: int
-) -> str:
+def _build_hotpot_prompt(question: str, contexts: List[str]) -> Dict[str, str]:
     joined = "\n\n---\n\n".join(contexts)
     system = (
         "You are answering a HotpotQA question using only provided evidence.\n"
@@ -48,10 +60,45 @@ def _generate_one_answer(
         f"Question: {question}\n\nEvidence:\n{joined}\n\n"
         "Return only the final answer text (one line, max 6 words)."
     )
+    return {"system": system, "user": user}
+
+
+def _build_squad_prompt(question: str, contexts: List[str]) -> Dict[str, str]:
+    joined = "\n\n---\n\n".join(contexts)
+    system = (
+        "You are answering a SQuAD-style question using only provided evidence.\n"
+        "STRICT OUTPUT RULES:\n"
+        "1) Output exactly one line.\n"
+        "2) Output only the final answer text, no explanation.\n"
+        "3) Prefer the shortest exact span from evidence.\n"
+        "4) If evidence is insufficient, output exactly: unknown"
+    )
+    user = (
+        f"Question: {question}\n\nEvidence:\n{joined}\n\n"
+        "Return only the final answer text (one line)."
+    )
+    return {"system": system, "user": user}
+
+
+def _build_prompt(question: str, contexts: List[str], prompt_style: str) -> Dict[str, str]:
+    if prompt_style == "squad":
+        return _build_squad_prompt(question=question, contexts=contexts)
+    return _build_hotpot_prompt(question=question, contexts=contexts)
+
+
+def _generate_one_answer(
+    ollama_url: str,
+    model: str,
+    question: str,
+    contexts: List[str],
+    seed: int,
+    prompt_style: str,
+) -> str:
+    prompt = _build_prompt(question=question, contexts=contexts, prompt_style=prompt_style)
     payload = {
         "model": model,
-        "system": system,
-        "prompt": user,
+        "system": prompt["system"],
+        "prompt": prompt["user"],
         "stream": False,
         "options": {
             "temperature": 0.0,
@@ -77,17 +124,90 @@ def _generate_one_answer(
     return str(content).strip()
 
 
+def _resolve_ollama_model(model_family: str) -> str:
+    return OLLAMA_MODELS.get(model_family, model_family)
+
+
+def _resolve_bedrock_model_id(model_family: str, explicit_model_id: str) -> str:
+    if explicit_model_id:
+        return explicit_model_id
+    model_id = BEDROCK_MODEL_IDS.get(model_family, "")
+    if model_id:
+        return model_id
+    raise RuntimeError(
+        "Bedrock model ID not configured. Set --bedrock-model-id or define the "
+        f"matching model id in config.py/.env for --hotpot-answer-model={model_family}."
+    )
+
+
+def _get_bedrock_client(region: str):
+    try:
+        import boto3
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            "boto3 is required for Bedrock answer generation. Install it with: pip install boto3"
+        ) from exc
+    kwargs = {}
+    if region:
+        kwargs["region_name"] = region
+    return boto3.client("bedrock-runtime", **kwargs)
+
+
+def _generate_one_answer_bedrock(
+    client: object,
+    model_id: str,
+    question: str,
+    contexts: List[str],
+    prompt_style: str,
+) -> str:
+    prompt = _build_prompt(question=question, contexts=contexts, prompt_style=prompt_style)
+    response = client.converse(
+        modelId=model_id,
+        system=[{"text": prompt["system"]}],
+        messages=[
+            {
+                "role": "user",
+                "content": [{"text": prompt["user"]}],
+            }
+        ],
+        inferenceConfig={
+            "temperature": 0.0,
+            "topP": 1.0,
+            "maxTokens": 64,
+        },
+    )
+    content = response.get("output", {}).get("message", {}).get("content", [])
+    if not content:
+        return "unknown"
+    text = content[0].get("text", "")
+    return str(text).strip() or "unknown"
+
+
 def generate_answers_from_top_chunks(
     queries: Dict[str, str],
     raw_chunk_results: Dict[str, Dict[str, float]],
     chunk_texts: Dict[str, str],
-    model: str,
+    provider: str,
+    model_family: str,
     top_k: int,
     seed: int,
     qids: Optional[Iterable[str]] = None,
+    bedrock_model_id: str = "",
+    bedrock_region: str = "",
+    prompt_style: str = "hotpot",
 ) -> Dict[str, str]:
     ollama_base = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434").rstrip("/")
     ollama_url = f"{ollama_base}/api/generate"
+    model = ""
+    bedrock_client = None
+    if provider == "ollama":
+        model = _resolve_ollama_model(model_family)
+    elif provider == "bedrock":
+        model = _resolve_bedrock_model_id(model_family=model_family, explicit_model_id=bedrock_model_id)
+        region = bedrock_region or BEDROCK_REGION
+        bedrock_client = _get_bedrock_client(region=region)
+    else:
+        raise ValueError(f"Unsupported answer provider: {provider}")
 
     target_qids = list(qids) if qids is not None else list(queries.keys())
     out: Dict[str, str] = {}
@@ -98,11 +218,21 @@ def generate_answers_from_top_chunks(
             chunk_texts=chunk_texts,
             top_k=top_k,
         )
-        out[qid] = _generate_one_answer(
-            ollama_url=ollama_url,
-            model=model,
-            question=queries.get(qid, ""),
-            contexts=contexts,
-            seed=seed,
-        )
+        if provider == "bedrock":
+            out[qid] = _generate_one_answer_bedrock(
+                client=bedrock_client,
+                model_id=model,
+                question=queries.get(qid, ""),
+                contexts=contexts,
+                prompt_style=prompt_style,
+            )
+        else:
+            out[qid] = _generate_one_answer(
+                ollama_url=ollama_url,
+                model=model,
+                question=queries.get(qid, ""),
+                contexts=contexts,
+                seed=seed,
+                prompt_style=prompt_style,
+            )
     return out

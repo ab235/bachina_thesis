@@ -261,6 +261,7 @@ def _bm25_scores_bm25s_chunks(
     chunk_texts: Dict[str, str],
     chunk_to_doc: Dict[str, str],
     allowed_docs_by_qid: Optional[Dict[str, List[str]]] = None,
+    top_n: Optional[int] = None,
 ) -> Dict[str, Dict[str, float]]:
     cids = list(chunk_texts.keys())
     corpus = [chunk_texts[cid] for cid in cids]
@@ -269,11 +270,11 @@ def _bm25_scores_bm25s_chunks(
     retriever.index(corpus_tokens)
 
     results: Dict[str, Dict[str, float]] = {}
-    top_n = max(1, len(cids))
+    retrieve_n = max(1, len(cids)) if top_n is None else max(1, min(int(top_n), len(cids)))
     for qid, qtext in queries.items():
         allowed = set(allowed_docs_by_qid.get(qid, [])) if allowed_docs_by_qid else None
         query_tokens = bm25s.tokenize([qtext])
-        hits, scores = retriever.retrieve(query_tokens, k=top_n)
+        hits, scores = retriever.retrieve(query_tokens, k=retrieve_n)
         by_chunk: Dict[str, float] = {}
         for idx, score in zip(hits[0], scores[0]):
             cid = cids[int(idx)]
@@ -290,12 +291,14 @@ def retrieve_bm25_chunks(
     chunk_texts: Dict[str, str],
     chunk_to_doc: Dict[str, str],
     allowed_docs_by_qid: Optional[Dict[str, List[str]]] = None,
+    top_n: Optional[int] = None,
 ) -> Dict[str, Dict[str, float]]:
     return _bm25_scores_bm25s_chunks(
         queries=queries,
         chunk_texts=chunk_texts,
         chunk_to_doc=chunk_to_doc,
         allowed_docs_by_qid=allowed_docs_by_qid,
+        top_n=top_n,
     )
 
 

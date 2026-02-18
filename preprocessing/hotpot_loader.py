@@ -14,7 +14,7 @@ def load_hotpot_distractor(
     Dict[str, str],
     Dict[str, Set[Tuple[str, int]]],
     Dict[str, List[str]],
-    Dict[str, str],
+    Dict[str, List[str]],
 ]:
     hotpot_gold_facts: Dict[str, Set[Tuple[str, int]]] = {}
     hotpot_doc_sentences: Dict[str, List[str]] = {}
@@ -26,13 +26,13 @@ def load_hotpot_distractor(
 
     corpus: Dict[str, Dict[str, str]] = {}
     queries: Dict[str, str] = {}
-    answers: Dict[str, str] = {}
+    answers: Dict[str, List[str]] = {}
     for r in rows:
         qid = r["_id"]
         if qid not in keep:
             continue
         queries[qid] = r["question"]
-        answers[qid] = str(r.get("answer", ""))
+        answers[qid] = [str(r.get("answer", ""))]
         supporting_facts = r.get("supporting_facts", [])
         title_to_did: Dict[str, str] = {}
         for i, ctx in enumerate(r.get("context", [])):

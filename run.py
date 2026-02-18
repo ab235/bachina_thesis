@@ -18,10 +18,9 @@ from evaluation import (
     build_predicted_supporting_facts,
     compute_hotpot_support_fact_coverage,
     recall_at_k_from_top_chunks,
-    select_docs_with_answer,
 )
 from generation import generate_answers_from_top_chunks
-from metrics import remap_supporting_facts_to_titles, score_hotpot_predictions
+from metrics import remap_supporting_facts_to_titles, score_hotpot_predictions, score_squad_predictions
 from preprocessing.sampling import sample_qids
 from retrieve import (
     retrieve_dense,
@@ -42,6 +41,7 @@ def init_retriever_context(
     retriever: str,
     args: object,
 ) -> RetrieverContext:
+    is_hotpot_dataset = dataset_name in {"hotpotqa_distractor", "hotpotqa_fullwiki"}
     shared_embedder = None
     dense_model_name = args.sbert_model
     if retriever == "sbert":
@@ -70,10 +70,10 @@ def init_retriever_context(
         dense_model_name=dense_model_name,
         late_pool_encoder=late_pool_encoder,
         do_hotpot_support_coverage=bool(
-            args.hotpot_support_fact_coverage and dataset_name == "hotpotqa_distractor"
+            args.hotpot_support_fact_coverage and is_hotpot_dataset
         ),
         do_hotpot_official_emf1=bool(
-            args.hotpot_official_emf1 and dataset_name == "hotpotqa_distractor"
+            args.hotpot_official_emf1 and is_hotpot_dataset
         ),
         need_raw_chunk_scores=True,
     )
@@ -87,6 +87,15 @@ def run_early_mode(
     args: object,
     ctx: RetrieverContext,
 ) -> RetrievalArtifacts:
+    coverage_top_n = max(
+        1,
+        int(
+            max(
+                list(getattr(args, "k_values", [1]))
+                + [getattr(args, "answer_recall_k", 1), getattr(args, "hotpot_answer_top_k", 1)]
+            )
+        ),
+    )
     coverage_raw_chunks: Dict[str, Dict[str, float]] = {}
     coverage_chunk_texts: Dict[str, str] = {}
     coverage_chunk_to_doc: Dict[str, str] = {}
@@ -122,6 +131,7 @@ def run_early_mode(
                     chunk_vectors=late_data.chunk_vectors,
                     chunk_to_doc=late_data.chunk_to_doc,
                     encoder=ctx.late_pool_encoder,
+                    top_n=coverage_top_n,
                 )
                 coverage_chunk_texts = late_data.chunk_texts
                 coverage_chunk_to_doc = late_data.chunk_to_doc
@@ -150,6 +160,7 @@ def run_early_mode(
                     sbert_model=ctx.dense_model_name,
                     batch_size=args.batch_size,
                     embedder=ctx.shared_embedder,
+                    top_n=coverage_top_n,
                 )
                 coverage_chunk_texts = chunk_texts
                 coverage_chunk_to_doc = chunk_to_doc
@@ -184,6 +195,7 @@ def run_early_mode(
                     queries=queries,
                     chunk_texts=late_data.chunk_texts,
                     chunk_to_doc=late_data.chunk_to_doc,
+                    top_n=coverage_top_n,
                 )
                 coverage_chunk_texts = late_data.chunk_texts
                 coverage_chunk_to_doc = late_data.chunk_to_doc
@@ -208,6 +220,7 @@ def run_early_mode(
                     queries=queries,
                     chunk_texts=chunk_texts,
                     chunk_to_doc=chunk_to_doc,
+                    top_n=coverage_top_n,
                 )
                 coverage_chunk_texts = chunk_texts
                 coverage_chunk_to_doc = chunk_to_doc
@@ -231,6 +244,15 @@ def run_hierarchical_mode(
     args: object,
     ctx: RetrieverContext,
 ) -> RetrievalArtifacts:
+    coverage_top_n = max(
+        1,
+        int(
+            max(
+                list(getattr(args, "k_values", [1]))
+                + [getattr(args, "answer_recall_k", 1), getattr(args, "hotpot_answer_top_k", 1)]
+            )
+        ),
+    )
     doc_texts = {doc_id: join_doc(doc) for doc_id, doc in corpus.items()}
     doc_id_map = {doc_id: doc_id for doc_id in doc_texts}
 
@@ -322,6 +344,7 @@ def run_hierarchical_mode(
                 chunk_to_doc=late_chunk_to_doc,
                 encoder=ctx.late_pool_encoder,
                 allowed_docs_by_qid=top_docs_by_qid,
+                top_n=coverage_top_n,
             )
         else:
             all_results = retrieve_dense(
@@ -351,6 +374,7 @@ def run_hierarchical_mode(
                 batch_size=args.batch_size,
                 embedder=ctx.shared_embedder,
                 allowed_docs_by_qid=top_docs_by_qid,
+                top_n=coverage_top_n,
             )
     else:
         results = retrieve_bm25(
@@ -366,6 +390,7 @@ def run_hierarchical_mode(
             chunk_texts=late_chunk_texts,
             chunk_to_doc=late_chunk_to_doc,
             allowed_docs_by_qid=top_docs_by_qid,
+            top_n=coverage_top_n,
         )
 
     return RetrievalArtifacts(
@@ -378,6 +403,7 @@ def run_hierarchical_mode(
 
 
 def compute_metrics_bundle(
+    dataset_name: str,
     corpus: Dict[str, Dict[str, str]],
     queries: Dict[str, str],
     artifacts: RetrievalArtifacts,
@@ -385,18 +411,15 @@ def compute_metrics_bundle(
     ctx: RetrieverContext,
     hotpot_gold_facts: Optional[Dict[str, Set[Tuple[str, int]]]],
     hotpot_doc_sentences: Optional[Dict[str, List[str]]],
-    hotpot_answers: Optional[Dict[str, str]],
+    hotpot_answers: Optional[Dict[str, List[str]]],
 ) -> Dict[str, object]:
-    relevant_docs_by_qid = select_docs_with_answer(
-        corpus=corpus,
-        answers_by_qid=hotpot_answers or {},
-    )
     metrics: Dict[str, object] = {
         "chunk_recall": recall_at_k_from_top_chunks(
             raw_chunk_results=artifacts.coverage_raw_chunks,
-            chunk_to_doc=artifacts.coverage_chunk_to_doc,
-            relevant_docs_by_qid=relevant_docs_by_qid,
+            chunk_texts=artifacts.coverage_chunk_texts,
+            answers_by_qid=hotpot_answers or {},
             k=max(1, int(args.answer_recall_k)),
+            min_answer_tokens=max(1, int(args.answer_match_min_tokens)),
         )
     }
 
@@ -431,10 +454,13 @@ def compute_metrics_bundle(
                 queries=queries,
                 raw_chunk_results=artifacts.coverage_raw_chunks,
                 chunk_texts=artifacts.coverage_chunk_texts,
-                model=args.hotpot_answer_model,
+                provider=args.answer_provider,
+                model_family=args.hotpot_answer_model,
                 top_k=max(1, args.hotpot_answer_top_k),
                 seed=args.seed,
                 qids=target_qids,
+                bedrock_model_id=args.bedrock_model_id,
+                bedrock_region=args.bedrock_region,
             )
             predicted_sp_doc = build_predicted_supporting_facts(
                 raw_chunk_results=artifacts.coverage_raw_chunks,
@@ -448,15 +474,57 @@ def compute_metrics_bundle(
             doc_id_to_title = {doc_id: (doc.get("title", "") or doc_id) for doc_id, doc in corpus.items()}
             predicted_sp_title = remap_supporting_facts_to_titles(predicted_sp_doc, doc_id_to_title)
             gold_sp_title = remap_supporting_facts_to_titles(hotpot_gold_facts or {}, doc_id_to_title)
+            gold_answers_for_scoring = {
+                qid: (aliases[0] if aliases else "")
+                for qid, aliases in (hotpot_answers or {}).items()
+            }
             metrics["hotpot_official_emf1"] = score_hotpot_predictions(
                 pred_answers=predicted_answers,
                 pred_supporting_facts=predicted_sp_title,
-                gold_answers=hotpot_answers or {},
+                gold_answers=gold_answers_for_scoring,
                 gold_supporting_facts=gold_sp_title,
                 qids=target_qids,
             )
         else:
             metrics["hotpot_official_emf1"] = {"num_scored": 0}
+
+    if dataset_name == "squad_v11" and artifacts.coverage_raw_chunks and artifacts.coverage_chunk_texts:
+        target_qids = [
+            qid
+            for qid in queries
+            if qid in (hotpot_answers or {})
+            and qid in artifacts.coverage_raw_chunks
+        ]
+        if args.hotpot_answer_max_queries > 0 and len(target_qids) > args.hotpot_answer_max_queries:
+            target_qids = sample_qids(
+                target_qids,
+                max_queries=args.hotpot_answer_max_queries,
+                seed=args.seed,
+            )
+        if target_qids:
+            predicted_answers = generate_answers_from_top_chunks(
+                queries=queries,
+                raw_chunk_results=artifacts.coverage_raw_chunks,
+                chunk_texts=artifacts.coverage_chunk_texts,
+                provider=args.answer_provider,
+                model_family=args.hotpot_answer_model,
+                top_k=max(1, args.hotpot_answer_top_k),
+                seed=args.seed,
+                qids=target_qids,
+                bedrock_model_id=args.bedrock_model_id,
+                bedrock_region=args.bedrock_region,
+                prompt_style="squad",
+            )
+            metrics["squad_rag_generated_emf1"] = score_squad_predictions(
+                pred_answers=predicted_answers,
+                gold_answers=hotpot_answers or {},
+                qids=target_qids,
+            )
+        else:
+            metrics["squad_rag_generated_emf1"] = {
+                "label": "SQuAD RAG-generated EM/F1 (official normalization)",
+                "num_scored": 0,
+            }
     return metrics
 
 
@@ -498,7 +566,7 @@ def evaluate_one(
     args: object,
     hotpot_gold_facts: Optional[Dict[str, Set[Tuple[str, int]]]] = None,
     hotpot_doc_sentences: Optional[Dict[str, List[str]]] = None,
-    hotpot_answers: Optional[Dict[str, str]] = None,
+    hotpot_answers: Optional[Dict[str, List[str]]] = None,
 ) -> Dict[str, object]:
     started_at = datetime.now(timezone.utc)
     t0 = perf_counter()
@@ -528,6 +596,7 @@ def evaluate_one(
         )
 
     metrics = compute_metrics_bundle(
+        dataset_name=dataset_name,
         corpus=corpus,
         queries=queries,
         artifacts=artifacts,

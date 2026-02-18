@@ -18,3 +18,4 @@ datasets
 faiss-cpu
 elasticsearch
 bm25s
+boto3

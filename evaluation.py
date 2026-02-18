@@ -1,16 +1,20 @@
 import re
+import string
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 from preprocessing.text import tokenize_text
 
 
-def _normalize_text(text: str) -> str:
-    return re.sub(r"\s+", " ", (text or "").strip().lower())
+def _normalize_for_answer_match(text: str) -> str:
+    text = (text or "").lower()
+    text = "".join(ch for ch in text if ch not in set(string.punctuation))
+    text = re.sub(r"\b(a|an|the)\b", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def select_docs_with_answer(
     corpus: Dict[str, Dict[str, str]],
-    answers_by_qid: Dict[str, str],
+    answers_by_qid: Dict[str, List[str]],
     candidate_doc_ids_by_qid: Optional[Dict[str, Iterable[str]]] = None,
     enforce_unique: bool = True,
     drop_boolean_answers: bool = True,
@@ -22,8 +26,9 @@ def select_docs_with_answer(
     (single total match and single matching doc).
     """
     out: Dict[str, Set[str]] = {}
-    for qid, answer in answers_by_qid.items():
-        answer_norm = _normalize_text(answer)
+    for qid, answer_aliases in answers_by_qid.items():
+        aliases = [a for a in answer_aliases if str(a or "").strip()]
+        answer_norm = _normalize_for_answer_match(aliases[0] if aliases else "")
         if not answer_norm:
             out[qid] = set()
             continue
@@ -44,7 +49,7 @@ def select_docs_with_answer(
             if not doc:
                 continue
             joined = " ".join([doc.get("title", "") or "", doc.get("text", "") or ""])
-            norm_joined = _normalize_text(joined)
+            norm_joined = _normalize_for_answer_match(joined)
             match_count = len(pattern.findall(norm_joined))
             if match_count > 0:
                 hits.add(did)
@@ -57,38 +62,83 @@ def select_docs_with_answer(
     return out
 
 
+def _has_answer_match(
+    chunk_text: str,
+    answer_aliases: List[str],
+    min_answer_tokens: int = 2,
+) -> bool:
+    normalized_chunk = _normalize_for_answer_match(chunk_text)
+    if not normalized_chunk:
+        return False
+    chunk_tokens = normalized_chunk.split()
+    if not chunk_tokens:
+        return False
+    chunk_token_set = set(chunk_tokens)
+    padded_chunk = f" {normalized_chunk} "
+
+    for alias in answer_aliases:
+        normalized_alias = _normalize_for_answer_match(alias)
+        if not normalized_alias:
+            continue
+        answer_tokens = normalized_alias.split()
+        if not answer_tokens:
+            continue
+
+        if len(answer_tokens) >= max(1, int(min_answer_tokens)):
+            if f" {normalized_alias} " in padded_chunk:
+                return True
+            continue
+
+        # Guard short single-token answers to avoid noisy matches (e.g., "an", "us").
+        if len(answer_tokens) == 1 and len(answer_tokens[0]) >= 3 and answer_tokens[0] in chunk_token_set:
+            return True
+    return False
+
+
 def recall_at_k_from_top_chunks(
     raw_chunk_results: Dict[str, Dict[str, float]],
-    chunk_to_doc: Dict[str, str],
-    relevant_docs_by_qid: Dict[str, Set[str]],
+    chunk_texts: Dict[str, str],
+    answers_by_qid: Dict[str, List[str]],
     k: int = 5,
+    min_answer_tokens: int = 2,
 ) -> Dict[str, object]:
     """
     Recall@k over top-k chunks:
-    For each qid, map top-k chunks to docs and compute doc recall against relevant_docs_by_qid[qid].
+    For each qid, score 1 if any normalized gold-answer alias is present in any top-k chunk.
     """
-    qids = [qid for qid, rel in relevant_docs_by_qid.items() if rel]
+    qids = [
+        qid
+        for qid, aliases in answers_by_qid.items()
+        if any(_normalize_for_answer_match(alias) for alias in aliases)
+    ]
     if not qids:
         return {"Recall@5_chunks": 0.0, "num_answerable": 0}
 
-    rec_sum = 0.0
+    hit_count = 0
     for qid in qids:
         ranked_chunks = sorted(
             raw_chunk_results.get(qid, {}).items(),
             key=lambda kv: kv[1],
             reverse=True,
         )[: max(1, k)]
-        retrieved_docs = {chunk_to_doc[cid] for cid, _ in ranked_chunks if cid in chunk_to_doc}
-        rel_docs = relevant_docs_by_qid[qid]
-        rec_sum += len(retrieved_docs & rel_docs) / float(len(rel_docs))
+        aliases = answers_by_qid.get(qid, [])
+        if any(
+            _has_answer_match(
+                chunk_text=chunk_texts.get(cid, ""),
+                answer_aliases=aliases,
+                min_answer_tokens=min_answer_tokens,
+            )
+            for cid, _ in ranked_chunks
+        ):
+            hit_count += 1
 
     return {
-        f"Recall@{k}_chunks": rec_sum / float(len(qids)),
+        f"Recall@{k}_chunks": hit_count / float(len(qids)),
         "num_answerable": len(qids),
     }
 
 
-def _sentence_hit_indices(chunk_text: str, sentences: List[str], min_token_recall: float = 0.9) -> Set[int]:
+def _sentence_hit_indices(chunk_text: str, sentences: List[str], min_token_recall: float = 0.7) -> Set[int]:
     out: Set[int] = set()
     norm_chunk = " ".join(tokenize_text(chunk_text))
     if not norm_chunk:

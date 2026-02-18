@@ -34,7 +34,7 @@ class EvaluationInputs:
     args: object
     hotpot_gold_facts: Optional[Dict[str, set]]
     hotpot_doc_sentences: Optional[Dict[str, List[str]]]
-    hotpot_answers: Optional[Dict[str, str]]
+    hotpot_answers: Optional[Dict[str, List[str]]]
 
 
 @dataclass

@@ -88,6 +88,7 @@ def retrieve_dense_chunks(
     batch_size: int,
     embedder: Optional[SBERTEmbedder] = None,
     allowed_docs_by_qid: Optional[Dict[str, List[str]]] = None,
+    top_n: Optional[int] = None,
 ) -> Dict[str, Dict[str, float]]:
     if embedder is None:
         embedder = SBERTEmbedder(model_name=sbert_model, batch_size=batch_size, normalize=True)
@@ -104,13 +105,20 @@ def retrieve_dense_chunks(
     results: Dict[str, Dict[str, float]] = {}
     for i, qid in enumerate(qids):
         scores_vec = np.dot(doc_emb, q_emb[i])
+        n = len(cids)
+        k = n if top_n is None else max(1, min(int(top_n), n))
+        if k >= n:
+            top_idx = np.argsort(-scores_vec)
+        else:
+            idx = np.argpartition(scores_vec, -k)[-k:]
+            top_idx = idx[np.argsort(-scores_vec[idx])]
         allowed = set(allowed_docs_by_qid.get(qid, [])) if allowed_docs_by_qid else None
         if allowed is None:
-            results[qid] = {cids[j]: float(scores_vec[j]) for j in range(len(cids))}
+            results[qid] = {cids[j]: float(scores_vec[j]) for j in top_idx}
         else:
             results[qid] = {
                 cids[j]: float(scores_vec[j])
-                for j in range(len(cids))
+                for j in top_idx
                 if chunk_to_doc.get(cids[j], cids[j]) in allowed
             }
     return results
@@ -153,6 +161,7 @@ def retrieve_dense_pooled_chunks(
     chunk_to_doc: Dict[str, str],
     encoder: object,
     allowed_docs_by_qid: Optional[Dict[str, List[str]]] = None,
+    top_n: Optional[int] = None,
 ) -> Dict[str, Dict[str, float]]:
     cids = list(chunk_vectors.keys())
     if not cids:
@@ -165,13 +174,20 @@ def retrieve_dense_pooled_chunks(
     results: Dict[str, Dict[str, float]] = {}
     for i, qid in enumerate(qids):
         scores_vec = mat @ qvecs[i]
+        n = len(cids)
+        k = n if top_n is None else max(1, min(int(top_n), n))
+        if k >= n:
+            top_idx = np.argsort(-scores_vec)
+        else:
+            idx = np.argpartition(scores_vec, -k)[-k:]
+            top_idx = idx[np.argsort(-scores_vec[idx])]
         allowed = set(allowed_docs_by_qid.get(qid, [])) if allowed_docs_by_qid else None
         if allowed is None:
-            results[qid] = {cids[j]: float(scores_vec[j]) for j in range(len(cids))}
+            results[qid] = {cids[j]: float(scores_vec[j]) for j in top_idx}
         else:
             results[qid] = {
                 cids[j]: float(scores_vec[j])
-                for j in range(len(cids))
+                for j in top_idx
                 if doc_ids[j] in allowed
             }
     return results
