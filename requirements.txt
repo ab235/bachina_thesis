@@ -15,7 +15,7 @@ nltk
 sentence-transformers
 ragas==0.4.3
 datasets
-faiss-cpu
+faiss-gpu
 elasticsearch
 bm25s
 boto3

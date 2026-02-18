@@ -52,9 +52,29 @@ LLAMA_TMP="$(mktemp)"
 MISTRAL_TMP="$(mktemp)"
 QWEN_TMP="$(mktemp)"
 
+resolve_sharded_output() {
+  local out="$1"
+  "${PYTHON_BIN}" - "${out}" "${JOB_INDEX}" "${JOB_COUNT}" <<'PY'
+import pathlib
+import sys
+
+out = pathlib.Path(sys.argv[1])
+job_index = int(sys.argv[2])
+job_count = int(sys.argv[3])
+
+if job_count > 1:
+    out = out.with_name(f"{out.stem}.job{job_index:03d}-of-{job_count:03d}{out.suffix}")
+print(out)
+PY
+}
+
+LLAMA_OUT="$(resolve_sharded_output "${LLAMA_TMP}")"
+MISTRAL_OUT="$(resolve_sharded_output "${MISTRAL_TMP}")"
+QWEN_OUT="$(resolve_sharded_output "${QWEN_TMP}")"
+
 cleanup() {
   if [[ "${KEEP_TEMPORARY}" -eq 0 ]]; then
-    rm -f "${LLAMA_TMP}" "${MISTRAL_TMP}" "${QWEN_TMP}"
+    rm -f "${LLAMA_TMP}" "${MISTRAL_TMP}" "${QWEN_TMP}" "${LLAMA_OUT}" "${MISTRAL_OUT}" "${QWEN_OUT}"
   fi
 }
 trap cleanup EXIT
@@ -85,7 +105,7 @@ wait "${PID_MISTRAL}"
 wait "${PID_QWEN}"
 
 echo "Merging outputs into ${COMBINED_OUTPUT}..."
-"${PYTHON_BIN}" - "${LLAMA_TMP}" "${MISTRAL_TMP}" "${QWEN_TMP}" "${COMBINED_OUTPUT}" <<'PY'
+"${PYTHON_BIN}" - "${LLAMA_OUT}" "${MISTRAL_OUT}" "${QWEN_OUT}" "${COMBINED_OUTPUT}" <<'PY'
 import json
 import pathlib
 import sys
@@ -127,7 +147,7 @@ PY
 echo "Saved merged results: ${COMBINED_OUTPUT}"
 if [[ "${KEEP_TEMPORARY}" -eq 1 ]]; then
   echo "Kept temporary files:"
-  echo "  llama=${LLAMA_TMP}"
-  echo "  mistral=${MISTRAL_TMP}"
-  echo "  qwen=${QWEN_TMP}"
+  echo "  llama=${LLAMA_TMP} (resolved output: ${LLAMA_OUT})"
+  echo "  mistral=${MISTRAL_TMP} (resolved output: ${MISTRAL_OUT})"
+  echo "  qwen=${QWEN_TMP} (resolved output: ${QWEN_OUT})"
 fi
