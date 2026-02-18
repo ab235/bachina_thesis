@@ -129,6 +129,8 @@ def main() -> None:
                     "dataset": row["dataset"],
                     "chunker": row["chunker"],
                     "retriever": row["retriever"],
+                    "answer_provider": row.get("answer_provider", ""),
+                    "generator_model_family": row.get("generator_model_family", ""),
                     "chunk_recall": row.get("chunk_recall", {}),
                     "hotpot_official_emf1": row.get("hotpot_official_emf1", {}),
                     "squad_rag_generated_emf1": row.get("squad_rag_generated_emf1", {}),
