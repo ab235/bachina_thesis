@@ -19,7 +19,7 @@ set -euo pipefail
 
 JOB_INDEX="${AWS_BATCH_JOB_ARRAY_INDEX:-0}"
 JOB_COUNT="${AWS_BATCH_JOB_ARRAY_SIZE:-1}"
-GPU_ID="${EVAL_GPU_ID:-0}"
+GPU_ID="${EVAL_GPU_ID:--1}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 COMBINED_OUTPUT="${COMBINED_OUTPUT:-results_array_ollama.json}"
 KEEP_TEMPORARY=0
@@ -27,6 +27,7 @@ FORWARD_ARGS=()
 AUTO_MERGE_ALL_SHARDS="${AUTO_MERGE_ALL_SHARDS:-1}"
 MERGE_WAIT_SECONDS="${MERGE_WAIT_SECONDS:-1800}"
 MERGE_POLL_SECONDS="${MERGE_POLL_SECONDS:-10}"
+MODEL_FAMILY_PARALLELISM="${MODEL_FAMILY_PARALLELISM:-1}"
 
 while (($#)); do
   case "$1" in
@@ -111,17 +112,23 @@ run_one() {
     "${FORWARD_ARGS[@]}"
 }
 
-echo "Starting parallel Ollama runs: llama, mistral, qwen ..."
-run_one "llama" "${LLAMA_TMP}" &
-PID_LLAMA=$!
-run_one "mistral" "${MISTRAL_TMP}" &
-PID_MISTRAL=$!
-run_one "qwen" "${QWEN_TMP}" &
-PID_QWEN=$!
-
-wait "${PID_LLAMA}"
-wait "${PID_MISTRAL}"
-wait "${PID_QWEN}"
+if [[ "${MODEL_FAMILY_PARALLELISM}" -ge 3 ]]; then
+  echo "Starting parallel Ollama runs: llama, mistral, qwen ..."
+  run_one "llama" "${LLAMA_TMP}" &
+  PID_LLAMA=$!
+  run_one "mistral" "${MISTRAL_TMP}" &
+  PID_MISTRAL=$!
+  run_one "qwen" "${QWEN_TMP}" &
+  PID_QWEN=$!
+  wait "${PID_LLAMA}"
+  wait "${PID_MISTRAL}"
+  wait "${PID_QWEN}"
+else
+  echo "Starting serial Ollama runs (MODEL_FAMILY_PARALLELISM=${MODEL_FAMILY_PARALLELISM})..."
+  run_one "llama" "${LLAMA_TMP}"
+  run_one "mistral" "${MISTRAL_TMP}"
+  run_one "qwen" "${QWEN_TMP}"
+fi
 
 echo "Merging model-family outputs into ${COMBINED_SHARD_OUTPUT}..."
 "${PYTHON_BIN}" - "${LLAMA_OUT}" "${MISTRAL_OUT}" "${QWEN_OUT}" "${COMBINED_SHARD_OUTPUT}" <<'PY'

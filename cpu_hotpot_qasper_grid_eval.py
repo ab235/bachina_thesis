@@ -10,8 +10,12 @@ from run import evaluate_one
 
 def main() -> None:
     args = parse_args()
-    if int(getattr(args, "gpu_id", -1)) >= 0:
-        os.environ["CUDA_VISIBLE_DEVICES"] = str(int(args.gpu_id))
+    gpu_id = int(getattr(args, "gpu_id", -1))
+    if gpu_id >= 0:
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
+    else:
+        # Make --gpu-id < 0 a true CPU mode for torch/sentence-transformers.
+        os.environ["CUDA_VISIBLE_DEVICES"] = ""
     logging.basicConfig(
         format="%(asctime)s - %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
