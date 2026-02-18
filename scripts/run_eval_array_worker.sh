@@ -24,6 +24,9 @@ PYTHON_BIN="${PYTHON_BIN:-python3}"
 COMBINED_OUTPUT="${COMBINED_OUTPUT:-results_array_ollama.json}"
 KEEP_TEMPORARY=0
 FORWARD_ARGS=()
+AUTO_MERGE_ALL_SHARDS="${AUTO_MERGE_ALL_SHARDS:-1}"
+MERGE_WAIT_SECONDS="${MERGE_WAIT_SECONDS:-1800}"
+MERGE_POLL_SECONDS="${MERGE_POLL_SECONDS:-10}"
 
 while (($#)); do
   case "$1" in
@@ -68,9 +71,25 @@ print(out)
 PY
 }
 
+list_expected_shards() {
+  local out="$1"
+  "${PYTHON_BIN}" - "${out}" "${JOB_COUNT}" <<'PY'
+import pathlib
+import sys
+
+out = pathlib.Path(sys.argv[1])
+job_count = int(sys.argv[2])
+
+for idx in range(job_count):
+    shard = out.with_name(f"{out.stem}.job{idx:03d}-of-{job_count:03d}{out.suffix}")
+    print(shard)
+PY
+}
+
 LLAMA_OUT="$(resolve_sharded_output "${LLAMA_TMP}")"
 MISTRAL_OUT="$(resolve_sharded_output "${MISTRAL_TMP}")"
 QWEN_OUT="$(resolve_sharded_output "${QWEN_TMP}")"
+COMBINED_SHARD_OUTPUT="$(resolve_sharded_output "${COMBINED_OUTPUT}")"
 
 cleanup() {
   if [[ "${KEEP_TEMPORARY}" -eq 0 ]]; then
@@ -104,8 +123,8 @@ wait "${PID_LLAMA}"
 wait "${PID_MISTRAL}"
 wait "${PID_QWEN}"
 
-echo "Merging outputs into ${COMBINED_OUTPUT}..."
-"${PYTHON_BIN}" - "${LLAMA_OUT}" "${MISTRAL_OUT}" "${QWEN_OUT}" "${COMBINED_OUTPUT}" <<'PY'
+echo "Merging model-family outputs into ${COMBINED_SHARD_OUTPUT}..."
+"${PYTHON_BIN}" - "${LLAMA_OUT}" "${MISTRAL_OUT}" "${QWEN_OUT}" "${COMBINED_SHARD_OUTPUT}" <<'PY'
 import json
 import pathlib
 import sys
@@ -144,10 +163,73 @@ with out_path.open("w", encoding="utf-8") as f:
     json.dump(payload, f, indent=2)
 PY
 
-echo "Saved merged results: ${COMBINED_OUTPUT}"
+echo "Saved merged results: ${COMBINED_SHARD_OUTPUT}"
+
+if [[ "${JOB_COUNT}" -gt 1 && "${AUTO_MERGE_ALL_SHARDS}" == "1" && "${JOB_INDEX}" -eq 0 ]]; then
+  echo "Job 0 waiting for all shard files to produce final merge at ${COMBINED_OUTPUT}..."
+  mapfile -t EXPECTED_SHARDS < <(list_expected_shards "${COMBINED_OUTPUT}")
+
+  START_TS="$(date +%s)"
+  while true; do
+    MISSING=0
+    for shard in "${EXPECTED_SHARDS[@]}"; do
+      if [[ ! -s "${shard}" ]]; then
+        MISSING=1
+        break
+      fi
+    done
+    if [[ "${MISSING}" -eq 0 ]]; then
+      break
+    fi
+
+    NOW_TS="$(date +%s)"
+    if (( NOW_TS - START_TS >= MERGE_WAIT_SECONDS )); then
+      echo "Timed out waiting for all shard files after ${MERGE_WAIT_SECONDS}s; skipping final merge."
+      break
+    fi
+    sleep "${MERGE_POLL_SECONDS}"
+  done
+
+  if [[ "${MISSING}" -eq 0 ]]; then
+    "${PYTHON_BIN}" - "${COMBINED_OUTPUT}" "${EXPECTED_SHARDS[@]}" <<'PY'
+import json
+import pathlib
+import sys
+from datetime import datetime, timezone
+
+out_path = pathlib.Path(sys.argv[1])
+inputs = [pathlib.Path(p) for p in sys.argv[2:]]
+
+all_results = []
+runs = []
+for path in inputs:
+    with path.open("r", encoding="utf-8") as f:
+        payload = json.load(f)
+    cfg = payload.get("config", {})
+    runs.extend(list(cfg.get("runs", [])))
+    all_results.extend(list(payload.get("results", [])))
+
+final_payload = {
+    "config": {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "merged_from_shards": [str(p) for p in inputs],
+        "num_shards": len(inputs),
+        "runs": runs,
+    },
+    "results": all_results,
+}
+
+out_path.parent.mkdir(parents=True, exist_ok=True)
+with out_path.open("w", encoding="utf-8") as f:
+    json.dump(final_payload, f, indent=2)
+PY
+    echo "Saved final merged results (all shards): ${COMBINED_OUTPUT}"
+  fi
+fi
 if [[ "${KEEP_TEMPORARY}" -eq 1 ]]; then
   echo "Kept temporary files:"
   echo "  llama=${LLAMA_TMP} (resolved output: ${LLAMA_OUT})"
   echo "  mistral=${MISTRAL_TMP} (resolved output: ${MISTRAL_OUT})"
   echo "  qwen=${QWEN_TMP} (resolved output: ${QWEN_OUT})"
+  echo "  shard_merged=${COMBINED_SHARD_OUTPUT}"
 fi
