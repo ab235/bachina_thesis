@@ -3,6 +3,7 @@ import json
 import socket
 import time
 import logging
+import http.client
 import urllib.error
 import urllib.request
 from typing import Dict, Iterable, List, Optional
@@ -130,7 +131,14 @@ def _generate_one_answer(
                 data = json.loads(resp.read().decode("utf-8"))
             content = data.get("response", "")
             return str(content).strip()
-        except (urllib.error.URLError, socket.timeout, TimeoutError, json.JSONDecodeError) as exc:
+        except (
+            urllib.error.URLError,
+            socket.timeout,
+            TimeoutError,
+            json.JSONDecodeError,
+            http.client.RemoteDisconnected,
+            ConnectionError,
+        ) as exc:
             last_exc = exc
             if attempt >= attempts:
                 break
