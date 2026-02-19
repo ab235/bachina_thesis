@@ -5,6 +5,7 @@ from config import (
     BEDROCK_MODEL_ID,
     BEDROCK_REGION,
     EVAL_ANSWER_PROVIDER,
+    EVAL_ALL_HOTPOT_ANSWER_MODELS,
     EVAL_ANSWER_MATCH_MIN_TOKENS,
     EVAL_BACKEND,
     EVAL_BATCH_SIZE,
@@ -23,6 +24,8 @@ from config import (
     EVAL_JOB_INDEX,
     EVAL_K,
     EVAL_MAX_CHARS,
+    EVAL_MODE3_CACHE_DIR,
+    EVAL_MODE3_CACHE_ENABLED,
     EVAL_MAX_QUERIES,
     EVAL_MIN_CHARS,
     EVAL_MODE,
@@ -69,6 +72,25 @@ def parse_args() -> argparse.Namespace:
         type=pathlib.Path,
         default=pathlib.Path(EVAL_WIKI_CORPUS_PATH),
         help="Global Wikipedia corpus path for fullwiki mode (JSON/JSONL file or shard directory).",
+    )
+    parser.add_argument(
+        "--mode3-cache-dir",
+        type=pathlib.Path,
+        default=pathlib.Path(EVAL_MODE3_CACHE_DIR),
+        help="Mode 3 only: cache directory for parsed fullwiki corpus.",
+    )
+    parser.add_argument(
+        "--mode3-cache-enabled",
+        dest="mode3_cache_enabled",
+        action="store_true",
+        default=EVAL_MODE3_CACHE_ENABLED,
+        help="Mode 3 only: enable fullwiki corpus cache.",
+    )
+    parser.add_argument(
+        "--no-mode3-cache",
+        dest="mode3_cache_enabled",
+        action="store_false",
+        help="Mode 3 only: disable fullwiki corpus cache.",
     )
     parser.add_argument(
         "--k",
@@ -119,6 +141,12 @@ def parse_args() -> argparse.Namespace:
         choices=["llama", "mistral", "qwen"],
         default=EVAL_HOTPOT_ANSWER_MODEL,
         help="Model family for answer generation.",
+    )
+    parser.add_argument(
+        "--all-hotpot-answer-models",
+        action="store_true",
+        default=EVAL_ALL_HOTPOT_ANSWER_MODELS,
+        help="Run llama/mistral/qwen answer generation after shared retrieval artifacts.",
     )
     parser.add_argument(
         "--bedrock-model-id",

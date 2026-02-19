@@ -2,10 +2,19 @@ import json
 import logging
 import os
 import pathlib
+from datetime import datetime, timezone
+from time import perf_counter
 from typing import Dict, List
 
 from preprocessing import load_hotpot_distractor, load_hotpot_fullwiki, load_squad_v11, parse_args
-from run import evaluate_one
+from run import (
+    build_result_row,
+    compute_metrics_bundle,
+    evaluate_one,
+    init_retriever_context,
+    run_early_mode,
+    run_hierarchical_mode,
+)
 
 
 def main() -> None:
@@ -71,6 +80,8 @@ def main() -> None:
             wiki_path=wiki_path,
             max_queries=args.max_queries,
             seed=args.seed,
+            cache_enabled=bool(getattr(args, "mode3_cache_enabled", True)),
+            cache_dir=pathlib.Path(getattr(args, "mode3_cache_dir", pathlib.Path(".cache/mode3_fullwiki"))),
         )
     else:
         raise ValueError(f"Unsupported mode: {args.mode}")
@@ -110,36 +121,115 @@ def main() -> None:
         )
 
     rows: List[Dict[str, object]] = []
+    all_model_families = ["llama", "mistral", "qwen"]
     for chunker, retriever in selected_combos:
         logging.info("Run: dataset=%s chunker=%s retriever=%s", dataset_name, chunker, retriever)
-        row = evaluate_one(
-            dataset_name=dataset_name,
-            corpus=corpus,
-            queries=queries,
-            chunker=chunker,
-            retriever=retriever,
-            args=args,
-            hotpot_gold_facts=hotpot_gold_facts,
-            hotpot_doc_sentences=hotpot_doc_sentences,
-            hotpot_answers=hotpot_answers,
-        )
-        rows.append(row)
-        print(
-            json.dumps(
-                {
-                    "dataset": row["dataset"],
-                    "chunker": row["chunker"],
-                    "retriever": row["retriever"],
-                    "answer_provider": row.get("answer_provider", ""),
-                    "generator_model_family": row.get("generator_model_family", ""),
-                    "chunk_recall": row.get("chunk_recall", {}),
-                    "hotpot_official_emf1": row.get("hotpot_official_emf1", {}),
-                    "squad_rag_generated_emf1": row.get("squad_rag_generated_emf1", {}),
-                },
-                indent=2,
-                sort_keys=True,
+        if bool(getattr(args, "all_hotpot_answer_models", False)):
+            started_at = datetime.now(timezone.utc)
+            t0 = perf_counter()
+            ctx = init_retriever_context(
+                dataset_name=dataset_name,
+                chunker=chunker,
+                retriever=retriever,
+                args=args,
             )
-        )
+            if args.chunking_mode == "early":
+                artifacts = run_early_mode(
+                    corpus=corpus,
+                    queries=queries,
+                    chunker=chunker,
+                    retriever=retriever,
+                    args=args,
+                    ctx=ctx,
+                )
+            else:
+                artifacts = run_hierarchical_mode(
+                    corpus=corpus,
+                    queries=queries,
+                    chunker=chunker,
+                    retriever=retriever,
+                    args=args,
+                    ctx=ctx,
+                )
+
+            original_model_family = str(getattr(args, "hotpot_answer_model", "llama"))
+            families = all_model_families if args.answer_provider == "ollama" else [original_model_family]
+            for family in families:
+                args.hotpot_answer_model = family
+                metrics = compute_metrics_bundle(
+                    dataset_name=dataset_name,
+                    corpus=corpus,
+                    queries=queries,
+                    artifacts=artifacts,
+                    args=args,
+                    ctx=ctx,
+                    hotpot_gold_facts=hotpot_gold_facts,
+                    hotpot_doc_sentences=hotpot_doc_sentences,
+                    hotpot_answers=hotpot_answers,
+                )
+                finished_at = datetime.now(timezone.utc)
+                row = build_result_row(
+                    dataset_name=dataset_name,
+                    chunking_mode=args.chunking_mode,
+                    chunker=chunker,
+                    retriever=retriever,
+                    num_queries=len(queries),
+                    num_docs=len(corpus),
+                    num_chunks=artifacts.num_chunks,
+                    started_at=started_at,
+                    finished_at=finished_at,
+                    duration_seconds=perf_counter() - t0,
+                    metrics=metrics,
+                    answer_provider=str(getattr(args, "answer_provider", "")),
+                    generator_model_family=family,
+                )
+                rows.append(row)
+                print(
+                    json.dumps(
+                        {
+                            "dataset": row["dataset"],
+                            "chunker": row["chunker"],
+                            "retriever": row["retriever"],
+                            "answer_provider": row.get("answer_provider", ""),
+                            "generator_model_family": row.get("generator_model_family", ""),
+                            "chunk_recall": row.get("chunk_recall", {}),
+                            "hotpot_official_emf1": row.get("hotpot_official_emf1", {}),
+                            "squad_rag_generated_emf1": row.get("squad_rag_generated_emf1", {}),
+                        },
+                        indent=2,
+                        sort_keys=True,
+                    )
+                )
+            args.hotpot_answer_model = original_model_family
+        else:
+            row = evaluate_one(
+                dataset_name=dataset_name,
+                corpus=corpus,
+                queries=queries,
+                chunker=chunker,
+                retriever=retriever,
+                args=args,
+                hotpot_gold_facts=hotpot_gold_facts,
+                hotpot_doc_sentences=hotpot_doc_sentences,
+                hotpot_answers=hotpot_answers,
+            )
+            rows.append(row)
+            print(
+                json.dumps(
+                    {
+                        "dataset": row["dataset"],
+                        "chunker": row["chunker"],
+                        "retriever": row["retriever"],
+                        "answer_provider": row.get("answer_provider", ""),
+                        "generator_model_family": row.get("generator_model_family", ""),
+                        "chunk_recall": row.get("chunk_recall", {}),
+                        "hotpot_official_emf1": row.get("hotpot_official_emf1", {}),
+                        "squad_rag_generated_emf1": row.get("squad_rag_generated_emf1", {}),
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+            )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     config = {

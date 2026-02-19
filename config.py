@@ -55,6 +55,8 @@ EVAL_DATASET_PATH_MODE1 = os.getenv("EVAL_DATASET_PATH_MODE1", "datasets/train-v
 EVAL_DATASET_PATH_MODE2 = os.getenv("EVAL_DATASET_PATH_MODE2", "datasets/hotpot_dev_distractor_v1.json")
 EVAL_DATASET_PATH_MODE3 = os.getenv("EVAL_DATASET_PATH_MODE3", "datasets/hotpot_dev_distractor_v1.json")
 EVAL_WIKI_CORPUS_PATH = os.getenv("EVAL_WIKI_CORPUS_PATH", "datasets/wiki_corpus.json")
+EVAL_MODE3_CACHE_ENABLED = os.getenv("EVAL_MODE3_CACHE_ENABLED", "true").lower() == "true"
+EVAL_MODE3_CACHE_DIR = os.getenv("EVAL_MODE3_CACHE_DIR", ".cache/mode3_fullwiki")
 EVAL_SQUAD_KEEP_ALL_DOCS = os.getenv("EVAL_SQUAD_KEEP_ALL_DOCS", "true").lower() == "true"
 EVAL_K = _env_int("EVAL_K", 5)
 EVAL_MAX_QUERIES = _env_int("EVAL_MAX_QUERIES", 0)
@@ -69,6 +71,7 @@ EVAL_RETRIEVERS = _env_csv("EVAL_RETRIEVERS", "sbert,e5,bm25s")
 EVAL_OUTPUT = os.getenv("EVAL_OUTPUT", "results.json")
 EVAL_ANSWER_PROVIDER = os.getenv("EVAL_ANSWER_PROVIDER", "ollama")
 EVAL_HOTPOT_ANSWER_MODEL = os.getenv("EVAL_HOTPOT_ANSWER_MODEL", "llama")
+EVAL_ALL_HOTPOT_ANSWER_MODELS = os.getenv("EVAL_ALL_HOTPOT_ANSWER_MODELS", "false").lower() == "true"
 OLLAMA_TIMEOUT_SECONDS = _env_int("OLLAMA_TIMEOUT_SECONDS", 300)
 OLLAMA_MAX_RETRIES = _env_int("OLLAMA_MAX_RETRIES", 5)
 OLLAMA_RETRY_BACKOFF_SECONDS = _env_float("OLLAMA_RETRY_BACKOFF_SECONDS", 3.0)

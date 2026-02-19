@@ -2,6 +2,10 @@ import json
 import pathlib
 import bz2
 import logging
+import os
+import time
+import hashlib
+import pickle
 from typing import Dict, List, Optional, Set, Tuple
 
 from .sampling import sample_qids
@@ -98,6 +102,91 @@ def _build_global_wiki_corpus(
     return corpus, doc_sentences, title_to_did
 
 
+def _compute_wiki_source_signature(wiki_path: pathlib.Path) -> str:
+    h = hashlib.sha256()
+    resolved = str(wiki_path.resolve())
+    h.update(resolved.encode("utf-8"))
+    if wiki_path.is_dir():
+        files = sorted(
+            p for p in wiki_path.rglob("*")
+            if p.is_file() and _is_wiki_file(p)
+        )
+        h.update(str(len(files)).encode("utf-8"))
+        for p in files:
+            st = p.stat()
+            rel = str(p.relative_to(wiki_path))
+            h.update(rel.encode("utf-8"))
+            h.update(str(st.st_size).encode("utf-8"))
+            h.update(str(st.st_mtime_ns).encode("utf-8"))
+    else:
+        st = wiki_path.stat()
+        h.update(str(st.st_size).encode("utf-8"))
+        h.update(str(st.st_mtime_ns).encode("utf-8"))
+    return h.hexdigest()[:16]
+
+
+def _cache_paths(cache_dir: pathlib.Path, wiki_path: pathlib.Path) -> Tuple[pathlib.Path, pathlib.Path]:
+    key = _compute_wiki_source_signature(wiki_path)
+    cache_path = cache_dir / f"fullwiki_corpus_{key}.pkl"
+    lock_path = cache_dir / f"fullwiki_corpus_{key}.lock"
+    return cache_path, lock_path
+
+
+def _try_load_wiki_cache(
+    cache_path: pathlib.Path,
+) -> Optional[Tuple[Dict[str, Dict[str, str]], Dict[str, List[str]], Dict[str, str]]]:
+    if not cache_path.exists():
+        return None
+    with cache_path.open("rb") as f:
+        payload = pickle.load(f)
+    if not isinstance(payload, dict):
+        return None
+    corpus = payload.get("corpus")
+    doc_sentences = payload.get("doc_sentences")
+    title_to_did = payload.get("title_to_did")
+    if not isinstance(corpus, dict) or not isinstance(doc_sentences, dict) or not isinstance(title_to_did, dict):
+        return None
+    return corpus, doc_sentences, title_to_did
+
+
+def _save_wiki_cache(
+    cache_path: pathlib.Path,
+    corpus: Dict[str, Dict[str, str]],
+    doc_sentences: Dict[str, List[str]],
+    title_to_did: Dict[str, str],
+) -> None:
+    tmp_path = cache_path.with_suffix(f"{cache_path.suffix}.tmp.{os.getpid()}")
+    payload = {
+        "corpus": corpus,
+        "doc_sentences": doc_sentences,
+        "title_to_did": title_to_did,
+    }
+    with tmp_path.open("wb") as f:
+        pickle.dump(payload, f, protocol=pickle.HIGHEST_PROTOCOL)
+    os.replace(tmp_path, cache_path)
+
+
+def _acquire_lock(lock_path: pathlib.Path, timeout_seconds: int = 7200, poll_seconds: float = 2.0) -> None:
+    start = time.time()
+    while True:
+        try:
+            fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                f.write(str(os.getpid()))
+            return
+        except FileExistsError:
+            if time.time() - start >= timeout_seconds:
+                raise TimeoutError(f"Timed out waiting for cache lock: {lock_path}")
+            time.sleep(poll_seconds)
+
+
+def _release_lock(lock_path: pathlib.Path) -> None:
+    try:
+        lock_path.unlink()
+    except FileNotFoundError:
+        pass
+
+
 def _iter_wiki_items(wiki_path: pathlib.Path):
     if wiki_path.is_dir():
         files = sorted(
@@ -168,6 +257,8 @@ def load_hotpot_fullwiki(
     wiki_path: pathlib.Path,
     max_queries: int,
     seed: int,
+    cache_enabled: bool = True,
+    cache_dir: Optional[pathlib.Path] = None,
 ) -> Tuple[
     Dict[str, Dict[str, str]],
     Dict[str, str],
@@ -175,7 +266,36 @@ def load_hotpot_fullwiki(
     Dict[str, List[str]],
     Dict[str, List[str]],
 ]:
-    corpus, hotpot_doc_sentences, title_to_did = _build_global_wiki_corpus(wiki_path)
+    cache_dir = cache_dir or pathlib.Path(".cache/mode3_fullwiki")
+    if cache_enabled:
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        cache_path, lock_path = _cache_paths(cache_dir=cache_dir, wiki_path=wiki_path)
+        logging.info("Mode3 fullwiki cache enabled: %s", cache_path)
+        cached = _try_load_wiki_cache(cache_path)
+        if cached is not None:
+            logging.info("Mode3 fullwiki cache hit: %s", cache_path)
+            corpus, hotpot_doc_sentences, title_to_did = cached
+        else:
+            logging.info("Mode3 fullwiki cache miss; acquiring lock: %s", lock_path)
+            _acquire_lock(lock_path)
+            try:
+                cached = _try_load_wiki_cache(cache_path)
+                if cached is not None:
+                    logging.info("Mode3 fullwiki cache became available: %s", cache_path)
+                    corpus, hotpot_doc_sentences, title_to_did = cached
+                else:
+                    corpus, hotpot_doc_sentences, title_to_did = _build_global_wiki_corpus(wiki_path)
+                    _save_wiki_cache(
+                        cache_path=cache_path,
+                        corpus=corpus,
+                        doc_sentences=hotpot_doc_sentences,
+                        title_to_did=title_to_did,
+                    )
+                    logging.info("Mode3 fullwiki cache saved: %s", cache_path)
+            finally:
+                _release_lock(lock_path)
+    else:
+        corpus, hotpot_doc_sentences, title_to_did = _build_global_wiki_corpus(wiki_path)
 
     with hotpot_path.open("r", encoding="utf-8") as f:
         rows = json.load(f)
