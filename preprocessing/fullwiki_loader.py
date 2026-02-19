@@ -1,6 +1,7 @@
 import json
 import pathlib
 import bz2
+import logging
 from typing import Dict, List, Optional, Set, Tuple
 
 from .sampling import sample_qids
@@ -57,6 +58,7 @@ def _build_global_wiki_corpus(
     title_to_did: Dict[str, str] = {}
     used_doc_ids: Set[str] = set()
 
+    page_count = 0
     for item in _iter_wiki_items(wiki_path):
         parsed = _extract_page(item)
         if parsed is None:
@@ -78,6 +80,20 @@ def _build_global_wiki_corpus(
         corpus[did] = {"title": title, "text": text}
         doc_sentences[did] = sents
         title_to_did.setdefault(normalized, did)
+        page_count += 1
+        if page_count % 50000 == 0:
+            logging.info(
+                "Fullwiki ingest progress: pages=%d docs=%d",
+                page_count,
+                len(corpus),
+            )
+
+    logging.info(
+        "Fullwiki ingest complete: pages=%d docs=%d unique_titles=%d",
+        page_count,
+        len(corpus),
+        len(title_to_did),
+    )
 
     return corpus, doc_sentences, title_to_did
 
@@ -88,9 +104,15 @@ def _iter_wiki_items(wiki_path: pathlib.Path):
             p for p in wiki_path.rglob("*")
             if p.is_file() and _is_wiki_file(p)
         )
+        logging.info(
+            "Fullwiki ingest scanning directory: %s (files=%d)",
+            wiki_path,
+            len(files),
+        )
         for p in files:
             yield from _iter_wiki_items_from_file(p)
         return
+    logging.info("Fullwiki ingest reading file: %s", wiki_path)
     yield from _iter_wiki_items_from_file(wiki_path)
 
 
@@ -106,9 +128,11 @@ def _is_wiki_file(path: pathlib.Path) -> bool:
 
 def _iter_wiki_items_from_file(path: pathlib.Path):
     name = path.name.lower()
+    logging.info("Fullwiki ingest file start: %s", path)
     if name.endswith(".jsonl") or name.endswith(".jsonl.bz2") or name.endswith(".bz2"):
         opener = bz2.open if name.endswith(".bz2") else open
         with opener(path, "rt", encoding="utf-8") as f:
+            line_count = 0
             for i, line in enumerate(f, start=1):
                 line = line.strip()
                 if not line:
@@ -119,7 +143,11 @@ def _iter_wiki_items_from_file(path: pathlib.Path):
                     raise ValueError(
                         f"Invalid JSONL in {path} at line {i}: {exc}"
                     ) from exc
+                line_count = i
+                if i % 200000 == 0:
+                    logging.info("Fullwiki ingest file progress: %s line=%d", path, i)
                 yield obj
+            logging.info("Fullwiki ingest file done: %s lines=%d", path, line_count)
         return
 
     with path.open("r", encoding="utf-8") as f:
