@@ -309,12 +309,12 @@ def _chunk_token_eval(text: str, args: object, _sentence_embed_fn: Optional[obje
 
 def _chunk_sentence_eval(text: str, args: object, _sentence_embed_fn: Optional[object]) -> List[str]:
     chunks = sentence_chunk(text)
-    min_chars = max(1, int(args.max_chars) // 2)
+    min_chars = max(1, int(args.min_chars))
     return _enforce_min_chunks_by_chars(chunks, min_chars=min_chars)
 
 
 def _chunk_recursive_eval(text: str, args: object, _sentence_embed_fn: Optional[object]) -> List[str]:
-    min_chars = max(1, int(args.max_chars) // 2)
+    min_chars = max(1, int(args.min_chars))
     return recursive_chunk(
         text,
         min_chars=min_chars,
@@ -332,7 +332,7 @@ def _chunk_semantic_eval(text: str, args: object, sentence_embed_fn: Optional[ob
         embed_fn=sentence_embed_fn,
         show_progress=False,
     )
-    min_chars = max(1, int(args.max_chars) // 2)
+    min_chars = max(1, int(args.min_chars))
     return _enforce_min_chunks_by_chars(chunks, min_chars=min_chars)
 
 

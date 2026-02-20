@@ -110,4 +110,22 @@ def load_squad_v11(
         kept_docs = {qid_to_doc[qid] for qid in keep if qid in qid_to_doc}
         corpus = {did: doc for did, doc in corpus.items() if did in kept_docs}
 
+    # Mode-1 stitched corpus: combine selected docs into one large document so
+    # chunkers define boundaries rather than inheriting paragraph boundaries.
+    parts: List[str] = []
+    for did, doc in corpus.items():
+        title = str(doc.get("title", "")).strip()
+        text = str(doc.get("text", "")).strip()
+        if not text:
+            continue
+        header = f"[doc={did} title={title}]".strip()
+        parts.append(f"{header}\n{text}" if title else f"[doc={did}]\n{text}")
+    stitched_text = "\n\n".join(parts).strip()
+    corpus = {
+        "squad::stitched": {
+            "title": "SQuAD v1.1 (stitched)",
+            "text": stitched_text,
+        }
+    }
+
     return corpus, queries, answers
