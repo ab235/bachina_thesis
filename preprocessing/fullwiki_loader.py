@@ -279,15 +279,16 @@ def load_hotpot_fullwiki(
             logging.info("Mode3 fullwiki cache hit: %s", cache_path)
             corpus, hotpot_doc_sentences, title_to_did = cached
         else:
-            logging.info("Mode3 fullwiki cache miss; acquiring lock: %s", lock_path)
+            logging.info("Mode3 fullwiki cache miss; building corpus without lock.")
+            corpus, hotpot_doc_sentences, title_to_did = _build_global_wiki_corpus(wiki_path)
+            logging.info("Mode3 cache write lock acquire: %s", lock_path)
             _acquire_lock(lock_path)
             try:
                 cached = _try_load_wiki_cache(cache_path)
                 if cached is not None:
-                    logging.info("Mode3 fullwiki cache became available: %s", cache_path)
+                    logging.info("Mode3 fullwiki cache became available while building: %s", cache_path)
                     corpus, hotpot_doc_sentences, title_to_did = cached
                 else:
-                    corpus, hotpot_doc_sentences, title_to_did = _build_global_wiki_corpus(wiki_path)
                     _save_wiki_cache(
                         cache_path=cache_path,
                         corpus=corpus,
