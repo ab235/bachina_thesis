@@ -6,9 +6,12 @@ import os
 import time
 import hashlib
 import pickle
+import random
 from typing import Dict, List, Optional, Set, Tuple
 
 from .sampling import sample_qids
+
+FULLWIKI_DEFAULT_DOC_SAMPLE_SIZE = 500
 
 
 def _normalize_title(title: str) -> str:
@@ -300,13 +303,61 @@ def load_hotpot_fullwiki(
     with hotpot_path.open("r", encoding="utf-8") as f:
         rows = json.load(f)
 
-    qids = [str(r.get("_id", "")) for r in rows if str(r.get("_id", "")).strip()]
+    # Default mode-3 speed path:
+    # sample a fixed subset of docs, then keep only questions whose supporting
+    # facts are fully contained in that sampled doc set.
+    candidate_dids: Set[str] = set()
+    for r in rows:
+        for title, _sent_idx in r.get("supporting_facts", []):
+            did = title_to_did.get(_normalize_title(title))
+            if did is not None:
+                candidate_dids.add(did)
+    all_candidate = sorted(candidate_dids)
+    rng = random.Random(seed)
+    if len(all_candidate) > FULLWIKI_DEFAULT_DOC_SAMPLE_SIZE:
+        sampled_dids = set(rng.sample(all_candidate, FULLWIKI_DEFAULT_DOC_SAMPLE_SIZE))
+    else:
+        sampled_dids = set(all_candidate)
+
+    sampled_norm_titles = {
+        _normalize_title(corpus[did].get("title", ""))
+        for did in sampled_dids
+        if did in corpus
+    }
+    corpus = {did: doc for did, doc in corpus.items() if did in sampled_dids}
+    hotpot_doc_sentences = {did: s for did, s in hotpot_doc_sentences.items() if did in sampled_dids}
+    title_to_did = {t: did for t, did in title_to_did.items() if t in sampled_norm_titles}
+    logging.info(
+        "Mode3 default doc sampling: selected_docs=%d candidate_docs=%d",
+        len(corpus),
+        len(all_candidate),
+    )
+
+    filtered_rows = []
+    for r in rows:
+        sf = r.get("supporting_facts", [])
+        if not sf:
+            continue
+        sf_dids: Set[str] = set()
+        missing = False
+        for title, _sent_idx in sf:
+            did = title_to_did.get(_normalize_title(title))
+            if did is None:
+                missing = True
+                break
+            sf_dids.add(did)
+        if missing or not sf_dids:
+            continue
+        if sf_dids.issubset(sampled_dids):
+            filtered_rows.append(r)
+
+    qids = [str(r.get("_id", "")) for r in filtered_rows if str(r.get("_id", "")).strip()]
     keep = set(sample_qids(qids, max_queries=max_queries, seed=seed))
 
     queries: Dict[str, str] = {}
     answers: Dict[str, List[str]] = {}
     hotpot_gold_facts: Dict[str, Set[Tuple[str, int]]] = {}
-    for r in rows:
+    for r in filtered_rows:
         qid = str(r.get("_id", "")).strip()
         if not qid or qid not in keep:
             continue
