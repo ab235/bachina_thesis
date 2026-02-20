@@ -16,6 +16,23 @@ from run import (
     run_hierarchical_mode,
 )
 
+def _stitch_corpus(corpus: Dict[str, Dict[str, str]], title: str) -> Dict[str, Dict[str, str]]:
+    parts: List[str] = []
+    for did, doc in corpus.items():
+        doc_title = str(doc.get("title", "")).strip()
+        text = str(doc.get("text", "")).strip()
+        if not text:
+            continue
+        header = f"[doc={did} title={doc_title}]".strip()
+        parts.append(f"{header}\n{text}" if doc_title else f"[doc={did}]\n{text}")
+    stitched_text = "\n\n".join(parts).strip()
+    return {
+        "stitched::fullwiki": {
+            "title": title,
+            "text": stitched_text,
+        }
+    }
+
 
 def main() -> None:
     args = parse_args()
@@ -83,6 +100,31 @@ def main() -> None:
             cache_enabled=bool(getattr(args, "mode3_cache_enabled", True)),
             cache_dir=pathlib.Path(getattr(args, "mode3_cache_dir", pathlib.Path(".cache/mode3_fullwiki"))),
         )
+    elif args.mode == 4:
+        dataset_name = "hotpotqa_fullwiki_stitched"
+        hotpot_path = args.dataset_path_mode3
+        wiki_path = args.wiki_corpus_path
+        if not hotpot_path.exists():
+            raise FileNotFoundError(
+                f"HotpotQA fullwiki question file not found: {hotpot_path}. "
+                "Pass --dataset-path-mode3 with a Hotpot fullwiki JSON split."
+            )
+        if not wiki_path.exists():
+            raise FileNotFoundError(
+                f"Global wiki corpus path not found: {wiki_path}. "
+                "Pass --wiki-corpus-path with a corpus file or shard directory."
+            )
+        corpus, queries, _hotpot_gold_facts, _hotpot_doc_sentences, hotpot_answers = load_hotpot_fullwiki(
+            hotpot_path=hotpot_path,
+            wiki_path=wiki_path,
+            max_queries=args.max_queries,
+            seed=args.seed,
+            cache_enabled=bool(getattr(args, "mode3_cache_enabled", True)),
+            cache_dir=pathlib.Path(getattr(args, "mode3_cache_dir", pathlib.Path(".cache/mode3_fullwiki"))),
+        )
+        corpus = _stitch_corpus(corpus=corpus, title="HotpotQA Fullwiki (stitched)")
+        hotpot_gold_facts = {}
+        hotpot_doc_sentences = {}
     else:
         raise ValueError(f"Unsupported mode: {args.mode}")
     logging.info(

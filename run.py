@@ -413,6 +413,7 @@ def compute_metrics_bundle(
     hotpot_doc_sentences: Optional[Dict[str, List[str]]],
     hotpot_answers: Optional[Dict[str, List[str]]],
 ) -> Dict[str, object]:
+    mode1_style_eval_datasets = {"squad_v11", "hotpotqa_fullwiki_stitched"}
     metrics: Dict[str, object] = {
         "chunk_recall": recall_at_k_from_top_chunks(
             raw_chunk_results=artifacts.coverage_raw_chunks,
@@ -488,7 +489,7 @@ def compute_metrics_bundle(
         else:
             metrics["hotpot_official_emf1"] = {"num_scored": 0}
 
-    if dataset_name == "squad_v11" and artifacts.coverage_raw_chunks and artifacts.coverage_chunk_texts:
+    if dataset_name in mode1_style_eval_datasets and artifacts.coverage_raw_chunks and artifacts.coverage_chunk_texts:
         target_qids = [
             qid
             for qid in queries

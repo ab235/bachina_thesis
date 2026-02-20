@@ -48,7 +48,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Chunking evaluation runner."
     )
-    parser.add_argument("--mode", type=int, choices=[1, 2, 3], default=EVAL_MODE)
+    parser.add_argument("--mode", type=int, choices=[1, 2, 3, 4], default=EVAL_MODE)
     parser.add_argument(
         "--dataset-path-mode1",
         type=pathlib.Path,
