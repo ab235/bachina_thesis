@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Small mode-1 token grid:
+# Small mode-1 late-token grid:
 # token_size in {64,128,256,512}
 # overlap in {16,32,48}
 #
 # Defaults:
-# - chunkers: token
+# - chunkers: late_token_pool
 # - retrievers: sbert
 # - generator model: llama
 
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 LOG_DIR="logs"
 RESULTS_DIR="results"
-COMBINED_OUTPUT="${RESULTS_DIR}/mode1_token_grid_combined.json"
-CHUNKERS="${CHUNKERS:-token}"
+COMBINED_OUTPUT="${RESULTS_DIR}/mode1_late_token_grid_combined.json"
+CHUNKERS="${CHUNKERS:-late_token_pool}"
 
 TOKEN_SIZES=(64 128 256 512)
 TOKEN_OVERLAPS=(16 32 48)
@@ -26,8 +26,8 @@ FAILED=0
 
 for token_size in "${TOKEN_SIZES[@]}"; do
   for overlap in "${TOKEN_OVERLAPS[@]}"; do
-    OUT_FILE="${RESULTS_DIR}/mode1_token_grid_t${token_size}_o${overlap}.json"
-    LOG_FILE="${LOG_DIR}/mode1_token_grid_t${token_size}_o${overlap}.log"
+    OUT_FILE="${RESULTS_DIR}/mode1_late_token_grid_t${token_size}_o${overlap}.json"
+    LOG_FILE="${LOG_DIR}/mode1_late_token_grid_t${token_size}_o${overlap}.log"
     OUT_FILES+=("${OUT_FILE}")
 
     echo "Running token_size=${token_size}, overlap=${overlap} ..."
