@@ -7,8 +7,8 @@ set -euo pipefail
 #
 # Defaults:
 # - chunkers: token
-# - retrievers: sbert, e5, bm25s
-# - all generator models enabled
+# - retrievers: sbert
+# - generator model: llama
 
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 LOG_DIR="logs"
@@ -35,9 +35,9 @@ for token_size in "${TOKEN_SIZES[@]}"; do
       --mode 1 \
       --dataset-path-mode1 datasets/dev-v1.1.json \
       --answer-provider ollama \
-      --retrievers sbert e5 bm25s \
+      --hotpot-answer-model llama \
+      --retrievers sbert \
       --chunkers ${CHUNKERS} \
-      --all-hotpot-answer-models \
       --token-size "${token_size}" \
       --overlap "${overlap}" \
       --k 5 \
