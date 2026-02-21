@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set, Tuple
 
 import numpy as np
 
@@ -20,6 +20,7 @@ class RetrievalArtifacts:
     coverage_raw_chunks: Dict[str, Dict[str, float]]
     coverage_chunk_texts: Dict[str, str]
     coverage_chunk_to_doc: Dict[str, str]
+    coverage_chunk_support_facts: Optional[Dict[str, Set[Tuple[str, int]]]]
     num_chunks: int
 
 

@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from time import perf_counter
+import re
 from typing import Dict, List, Optional, Set, Tuple
 
 import numpy as np
@@ -17,7 +18,9 @@ from embeddings import (
 from evaluation import (
     build_predicted_supporting_facts,
     compute_hotpot_support_fact_coverage,
+    extract_tagged_support_facts,
     recall_at_k_from_top_chunks,
+    strip_support_fact_markers,
 )
 from generation import generate_answers_from_top_chunks
 from metrics import remap_supporting_facts_to_titles, score_hotpot_predictions, score_squad_predictions
@@ -33,6 +36,110 @@ from datatypes import RetrievalArtifacts, RetrieverContext
 
 def topk_rank(scores: Dict[str, float], k: int) -> List[str]:
     return [d for d, _ in sorted(scores.items(), key=lambda kv: kv[1], reverse=True)[:k]]
+
+
+def _chunk_sort_key(cid: str) -> Tuple[int, str]:
+    m = re.search(r"#chunk(\d+)$", cid)
+    if m:
+        try:
+            return (int(m.group(1)), cid)
+        except ValueError:
+            pass
+    return (10**12, cid)
+
+
+def _build_chunk_support_facts_from_provenance(
+    corpus: Dict[str, Dict[str, str]],
+    chunk_texts: Dict[str, str],
+    chunk_to_doc: Dict[str, str],
+) -> Optional[Dict[str, Set[Tuple[str, int]]]]:
+    docs_with_provenance = {
+        did: doc
+        for did, doc in corpus.items()
+        if isinstance(doc.get("_support_spans"), list) and doc.get("_support_spans")
+    }
+    if not docs_with_provenance:
+        return None
+
+    support_map: Dict[str, Set[Tuple[str, int]]] = {}
+    per_doc_chunk_ids: Dict[str, List[str]] = {}
+    for cid, did in chunk_to_doc.items():
+        per_doc_chunk_ids.setdefault(did, []).append(cid)
+
+    for did, chunk_ids in per_doc_chunk_ids.items():
+        doc = corpus.get(did, {})
+        spans_raw = doc.get("_support_spans")
+        if not isinstance(spans_raw, list) or not spans_raw:
+            continue
+        joined = join_doc(doc)
+        if not joined:
+            continue
+        spans: List[Tuple[int, int, str, int]] = []
+        for row in spans_raw:
+            if not isinstance(row, dict):
+                continue
+            try:
+                start = int(row.get("start", -1))
+                end = int(row.get("end", -1))
+                src_did = str(row.get("doc_id", ""))
+                sent_idx = int(row.get("sent_idx", -1))
+            except Exception:
+                continue
+            if start < 0 or end <= start or not src_did or sent_idx < 0:
+                continue
+            spans.append((start, end, src_did, sent_idx))
+        if not spans:
+            continue
+
+        spans.sort(key=lambda x: x[0])
+        cursor = 0
+        for cid in sorted(chunk_ids, key=_chunk_sort_key):
+            chunk = chunk_texts.get(cid, "")
+            if not chunk:
+                continue
+            window_start = max(0, cursor - 256)
+            start = joined.find(chunk, window_start)
+            if start < 0:
+                start = joined.find(chunk)
+            if start < 0:
+                continue
+            end = start + len(chunk)
+            cursor = start
+            facts: Set[Tuple[str, int]] = set()
+            for s_start, s_end, src_did, sent_idx in spans:
+                if s_end <= start:
+                    continue
+                if s_start >= end:
+                    break
+                facts.add((src_did, sent_idx))
+            if facts:
+                support_map[cid] = facts
+
+    return support_map if support_map else None
+
+
+def _separate_support_metadata(
+    corpus: Dict[str, Dict[str, str]],
+    chunk_texts: Dict[str, str],
+    chunk_to_doc: Dict[str, str],
+) -> Tuple[Dict[str, str], Optional[Dict[str, Set[Tuple[str, int]]]]]:
+    cleaned: Dict[str, str] = {}
+    support = _build_chunk_support_facts_from_provenance(
+        corpus=corpus,
+        chunk_texts=chunk_texts,
+        chunk_to_doc=chunk_to_doc,
+    )
+    use_marker_fallback = support is None
+    marker_support: Dict[str, Set[Tuple[str, int]]] = {}
+    for cid, text in chunk_texts.items():
+        if use_marker_fallback:
+            sf = extract_tagged_support_facts(text)
+            if sf:
+                marker_support[cid] = sf
+        cleaned[cid] = strip_support_fact_markers(text)
+    if use_marker_fallback and marker_support:
+        support = marker_support
+    return cleaned, support
 
 
 def init_retriever_context(
@@ -103,6 +210,7 @@ def run_early_mode(
     coverage_raw_chunks: Dict[str, Dict[str, float]] = {}
     coverage_chunk_texts: Dict[str, str] = {}
     coverage_chunk_to_doc: Dict[str, str] = {}
+    coverage_chunk_support_facts: Optional[Dict[str, Set[Tuple[str, int]]]] = None
 
     if retriever in {"sbert", "e5"}:
         if chunker == "late_token_pool":
@@ -114,6 +222,11 @@ def run_early_mode(
                 encoder=ctx.late_pool_encoder,
                 args=args,
                 desc="Late token pool build (early)",
+            )
+            late_chunk_texts, late_chunk_support_facts = _separate_support_metadata(
+                corpus=corpus,
+                chunk_texts=late_data.chunk_texts,
+                chunk_to_doc=late_data.chunk_to_doc,
             )
             if late_data.truncated_docs:
                 import logging
@@ -137,8 +250,9 @@ def run_early_mode(
                     encoder=ctx.late_pool_encoder,
                     top_n=coverage_top_n,
                 )
-                coverage_chunk_texts = late_data.chunk_texts
+                coverage_chunk_texts = late_chunk_texts
                 coverage_chunk_to_doc = late_data.chunk_to_doc
+                coverage_chunk_support_facts = late_chunk_support_facts
         else:
             sentence_embed_fn = build_sentence_embed_fn(args) if chunker == "semantic" else None
             chunk_texts, chunk_to_doc = chunk_corpus_for_eval(
@@ -146,6 +260,11 @@ def run_early_mode(
                 chunker=chunker,
                 args=args,
                 sentence_embed_fn=sentence_embed_fn,
+            )
+            chunk_texts, chunk_support_facts = _separate_support_metadata(
+                corpus=corpus,
+                chunk_texts=chunk_texts,
+                chunk_to_doc=chunk_to_doc,
             )
             results = retrieve_dense(
                 queries=queries,
@@ -168,6 +287,7 @@ def run_early_mode(
                 )
                 coverage_chunk_texts = chunk_texts
                 coverage_chunk_to_doc = chunk_to_doc
+                coverage_chunk_support_facts = chunk_support_facts
     elif retriever in {"bm25", "bm25s"}:
         if chunker == "late_token_pool":
             if ctx.late_pool_encoder is None:
@@ -179,6 +299,11 @@ def run_early_mode(
                 args=args,
                 desc="Late token pool build (early)",
             )
+            late_chunk_texts, late_chunk_support_facts = _separate_support_metadata(
+                corpus=corpus,
+                chunk_texts=late_data.chunk_texts,
+                chunk_to_doc=late_data.chunk_to_doc,
+            )
             if late_data.truncated_docs:
                 import logging
 
@@ -188,7 +313,7 @@ def run_early_mode(
                 )
             results = retrieve_bm25(
                 queries=queries,
-                chunk_texts=late_data.chunk_texts,
+                chunk_texts=late_chunk_texts,
                 chunk_to_doc=late_data.chunk_to_doc,
                 k_values=args.k_values,
                 size=max(args.k_values),
@@ -197,12 +322,13 @@ def run_early_mode(
             if ctx.need_raw_chunk_scores:
                 coverage_raw_chunks = retrieve_bm25_chunks(
                     queries=queries,
-                    chunk_texts=late_data.chunk_texts,
+                    chunk_texts=late_chunk_texts,
                     chunk_to_doc=late_data.chunk_to_doc,
                     top_n=coverage_top_n,
                 )
-                coverage_chunk_texts = late_data.chunk_texts
+                coverage_chunk_texts = late_chunk_texts
                 coverage_chunk_to_doc = late_data.chunk_to_doc
+                coverage_chunk_support_facts = late_chunk_support_facts
         else:
             sentence_embed_fn = build_sentence_embed_fn(args) if chunker == "semantic" else None
             chunk_texts, chunk_to_doc = chunk_corpus_for_eval(
@@ -210,6 +336,11 @@ def run_early_mode(
                 chunker=chunker,
                 args=args,
                 sentence_embed_fn=sentence_embed_fn,
+            )
+            chunk_texts, chunk_support_facts = _separate_support_metadata(
+                corpus=corpus,
+                chunk_texts=chunk_texts,
+                chunk_to_doc=chunk_to_doc,
             )
             results = retrieve_bm25(
                 queries=queries,
@@ -228,6 +359,7 @@ def run_early_mode(
                 )
                 coverage_chunk_texts = chunk_texts
                 coverage_chunk_to_doc = chunk_to_doc
+                coverage_chunk_support_facts = chunk_support_facts
     else:
         raise ValueError(f"Unsupported retriever: {retriever}")
 
@@ -236,6 +368,7 @@ def run_early_mode(
         coverage_raw_chunks=coverage_raw_chunks,
         coverage_chunk_texts=coverage_chunk_texts,
         coverage_chunk_to_doc=coverage_chunk_to_doc,
+        coverage_chunk_support_facts=coverage_chunk_support_facts,
         num_chunks=num_chunks,
     )
 
@@ -289,6 +422,7 @@ def run_hierarchical_mode(
     late_chunk_texts: Dict[str, str] = {}
     late_chunk_to_doc: Dict[str, str] = {}
     late_chunk_vectors: Dict[str, np.ndarray] = {}
+    late_chunk_support_facts: Optional[Dict[str, Set[Tuple[str, int]]]] = None
     if chunker == "late_token_pool":
         if ctx.late_pool_encoder is None:
             raise RuntimeError("late_token_pool encoder was not initialized.")
@@ -309,6 +443,11 @@ def run_hierarchical_mode(
         late_chunk_texts = late_data.chunk_texts
         late_chunk_to_doc = late_data.chunk_to_doc
         late_chunk_vectors = late_data.chunk_vectors
+        late_chunk_texts, late_chunk_support_facts = _separate_support_metadata(
+            corpus=corpus,
+            chunk_texts=late_chunk_texts,
+            chunk_to_doc=late_chunk_to_doc,
+        )
     else:
         sentence_embed_fn = build_sentence_embed_fn(args) if chunker == "semantic" else None
         for doc_id in tqdm(
@@ -330,6 +469,11 @@ def run_hierarchical_mode(
                 cid = f"{doc_id}#chunk{idx}"
                 late_chunk_texts[cid] = chunk
                 late_chunk_to_doc[cid] = doc_id
+        late_chunk_texts, late_chunk_support_facts = _separate_support_metadata(
+            corpus=corpus,
+            chunk_texts=late_chunk_texts,
+            chunk_to_doc=late_chunk_to_doc,
+        )
 
     if retriever in {"sbert", "e5"}:
         if chunker == "late_token_pool":
@@ -402,6 +546,7 @@ def run_hierarchical_mode(
         coverage_raw_chunks=coverage_raw_chunks,
         coverage_chunk_texts=late_chunk_texts,
         coverage_chunk_to_doc=late_chunk_to_doc,
+        coverage_chunk_support_facts=late_chunk_support_facts,
         num_chunks=len(late_chunk_texts),
     )
 
@@ -437,6 +582,7 @@ def compute_metrics_bundle(
                 k_values=sorted(set(args.k_values)),
                 hotpot_gold_facts=hotpot_gold_facts or {},
                 hotpot_doc_sentences=hotpot_doc_sentences or {},
+                chunk_support_facts=artifacts.coverage_chunk_support_facts,
             )
         )
     if ctx.do_hotpot_official_emf1 and artifacts.coverage_raw_chunks and artifacts.coverage_chunk_to_doc:
@@ -475,6 +621,7 @@ def compute_metrics_bundle(
                 qids=target_qids,
                 top_k=max(1, args.hotpot_answer_top_k),
                 max_facts=max(1, args.hotpot_sp_max_facts),
+                chunk_support_facts=artifacts.coverage_chunk_support_facts,
             )
             doc_id_to_title = {doc_id: (doc.get("title", "") or doc_id) for doc_id, doc in corpus.items()}
             predicted_sp_title = remap_supporting_facts_to_titles(predicted_sp_doc, doc_id_to_title)

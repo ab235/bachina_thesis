@@ -16,43 +16,61 @@ from run import (
     run_hierarchical_mode,
 )
 
-def _marker_doc_id_hex(did: str) -> str:
-    # Tokenizer-safe and lossless encoding for doc ids.
-    # Example: "wiki::abc" -> "77696b693a3a616263"
-    raw = str(did).encode("utf-8", errors="ignore").hex()
-    return raw or "64"  # "d"
-
-
 def _stitch_corpus(
     corpus: Dict[str, Dict[str, str]],
     hotpot_doc_sentences: Dict[str, List[str]],
     title: str,
 ) -> Dict[str, Dict[str, str]]:
     parts: List[str] = []
+    support_spans: List[Dict[str, object]] = []
+    cursor = 0
     for did, doc in corpus.items():
         doc_title = str(doc.get("title", "")).strip()
         text = str(doc.get("text", "")).strip()
         sents = [str(s).strip() for s in hotpot_doc_sentences.get(did, []) if str(s).strip()]
         if not text and not sents:
             continue
+        if parts:
+            parts.append("\n\n")
+            cursor += 2
         header = f"[doc={did} title={doc_title}]".strip()
-        body_lines: List[str] = []
+        header_line = f"{header}\n" if doc_title else f"[doc={did}]\n"
+        parts.append(header_line)
+        cursor += len(header_line)
         if sents:
-            # Mode-4 provenance tags for supporting-fact evaluation:
-            # each sentence carries its original (doc, sentence_idx).
-            did_hex = _marker_doc_id_hex(did)
             for sent_idx, sent in enumerate(sents):
-                body_lines.append(f"HPDOCHEX_{did_hex}_HPSENT_{sent_idx} {sent}")
+                if sent_idx > 0:
+                    parts.append("\n")
+                    cursor += 1
+                start = cursor
+                parts.append(sent)
+                cursor += len(sent)
+                support_spans.append(
+                    {
+                        "start": start,
+                        "end": cursor,
+                        "doc_id": did,
+                        "sent_idx": int(sent_idx),
+                    }
+                )
         elif text:
-            did_hex = _marker_doc_id_hex(did)
-            body_lines.append(f"HPDOCHEX_{did_hex}_HPSENT_0 {text}")
-        body = "\n".join(body_lines).strip()
-        parts.append(f"{header}\n{body}" if doc_title else f"[doc={did}]\n{body}")
-    stitched_text = "\n\n".join(parts).strip()
+            start = cursor
+            parts.append(text)
+            cursor += len(text)
+            support_spans.append(
+                {
+                    "start": start,
+                    "end": cursor,
+                    "doc_id": did,
+                    "sent_idx": 0,
+                }
+            )
+    stitched_text = "".join(parts).strip()
     return {
         "stitched::fullwiki": {
             "title": title,
             "text": stitched_text,
+            "_support_spans": support_spans,
         }
     }
 

@@ -209,6 +209,18 @@ def _extract_tagged_support_facts(chunk_text: str) -> Set[Tuple[str, int]]:
     return out
 
 
+def extract_tagged_support_facts(chunk_text: str) -> Set[Tuple[str, int]]:
+    return _extract_tagged_support_facts(chunk_text)
+
+
+def strip_support_fact_markers(chunk_text: str) -> str:
+    text = str(chunk_text or "")
+    text = _HPDOC_SENT_TAG_RE.sub(" ", text)
+    text = _HPDOC_SENT_MARKER_RE.sub(" ", text)
+    text = _HPDOC_SENT_HEX_MARKER_RE.sub(" ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
 def _build_chunk_to_sent_idxs(
     chunk_texts: Dict[str, str],
     chunk_to_doc: Dict[str, str],
@@ -233,8 +245,9 @@ def compute_hotpot_support_fact_coverage(
     k_values: List[int],
     hotpot_gold_facts: Dict[str, Set[Tuple[str, int]]],
     hotpot_doc_sentences: Dict[str, List[str]],
+    chunk_support_facts: Optional[Dict[str, Set[Tuple[str, int]]]] = None,
 ) -> Dict[str, Dict[str, float]]:
-    chunk_to_tagged_support: Dict[str, Set[Tuple[str, int]]] = {
+    chunk_to_tagged_support: Dict[str, Set[Tuple[str, int]]] = chunk_support_facts or {
         cid: _extract_tagged_support_facts(chunk_text)
         for cid, chunk_text in chunk_texts.items()
     }
@@ -282,8 +295,9 @@ def build_predicted_supporting_facts(
     qids: Iterable[str],
     top_k: int,
     max_facts: int,
+    chunk_support_facts: Optional[Dict[str, Set[Tuple[str, int]]]] = None,
 ) -> Dict[str, Set[Tuple[str, int]]]:
-    chunk_to_tagged_support: Dict[str, Set[Tuple[str, int]]] = {
+    chunk_to_tagged_support: Dict[str, Set[Tuple[str, int]]] = chunk_support_facts or {
         cid: _extract_tagged_support_facts(chunk_text)
         for cid, chunk_text in chunk_texts.items()
     }
