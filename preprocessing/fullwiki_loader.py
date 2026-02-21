@@ -7,7 +7,7 @@ from typing import Dict, List, Optional, Set, Tuple
 
 from .sampling import sample_qids
 
-FULLWIKI_DEFAULT_DOC_SAMPLE_SIZE = 5000
+FULLWIKI_DEFAULT_DOC_SAMPLE_SIZE = 4000
 
 
 def _normalize_title(title: str) -> str:
