@@ -16,15 +16,29 @@ from run import (
     run_hierarchical_mode,
 )
 
-def _stitch_corpus(corpus: Dict[str, Dict[str, str]], title: str) -> Dict[str, Dict[str, str]]:
+def _stitch_corpus(
+    corpus: Dict[str, Dict[str, str]],
+    hotpot_doc_sentences: Dict[str, List[str]],
+    title: str,
+) -> Dict[str, Dict[str, str]]:
     parts: List[str] = []
     for did, doc in corpus.items():
         doc_title = str(doc.get("title", "")).strip()
         text = str(doc.get("text", "")).strip()
-        if not text:
+        sents = [str(s).strip() for s in hotpot_doc_sentences.get(did, []) if str(s).strip()]
+        if not text and not sents:
             continue
         header = f"[doc={did} title={doc_title}]".strip()
-        parts.append(f"{header}\n{text}" if doc_title else f"[doc={did}]\n{text}")
+        body_lines: List[str] = []
+        if sents:
+            # Mode-4 provenance tags for supporting-fact evaluation:
+            # each sentence carries its original (doc, sentence_idx).
+            for sent_idx, sent in enumerate(sents):
+                body_lines.append(f"[[HPDOC:{did}::S:{sent_idx}]] {sent}")
+        elif text:
+            body_lines.append(f"[[HPDOC:{did}::S:0]] {text}")
+        body = "\n".join(body_lines).strip()
+        parts.append(f"{header}\n{body}" if doc_title else f"[doc={did}]\n{body}")
     stitched_text = "\n\n".join(parts).strip()
     return {
         "stitched::fullwiki": {
@@ -114,7 +128,7 @@ def main() -> None:
                 f"Global wiki corpus path not found: {wiki_path}. "
                 "Pass --wiki-corpus-path with a corpus file or shard directory."
             )
-        corpus, queries, _hotpot_gold_facts, _hotpot_doc_sentences, hotpot_answers = load_hotpot_fullwiki(
+        corpus, queries, hotpot_gold_facts, hotpot_doc_sentences, hotpot_answers = load_hotpot_fullwiki(
             hotpot_path=hotpot_path,
             wiki_path=wiki_path,
             max_queries=args.max_queries,
@@ -122,9 +136,11 @@ def main() -> None:
             cache_enabled=bool(getattr(args, "mode3_cache_enabled", True)),
             cache_dir=pathlib.Path(getattr(args, "mode3_cache_dir", pathlib.Path(".cache/mode3_fullwiki"))),
         )
-        corpus = _stitch_corpus(corpus=corpus, title="HotpotQA Fullwiki (stitched)")
-        hotpot_gold_facts = {}
-        hotpot_doc_sentences = {}
+        corpus = _stitch_corpus(
+            corpus=corpus,
+            hotpot_doc_sentences=hotpot_doc_sentences,
+            title="HotpotQA Fullwiki (stitched)",
+        )
     else:
         raise ValueError(f"Unsupported mode: {args.mode}")
     logging.info(

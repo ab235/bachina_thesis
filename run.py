@@ -41,7 +41,11 @@ def init_retriever_context(
     retriever: str,
     args: object,
 ) -> RetrieverContext:
-    is_hotpot_dataset = dataset_name in {"hotpotqa_distractor", "hotpotqa_fullwiki"}
+    is_hotpot_dataset = dataset_name in {
+        "hotpotqa_distractor",
+        "hotpotqa_fullwiki",
+        "hotpotqa_fullwiki_stitched",
+    }
     shared_embedder = None
     dense_model_name = args.sbert_model
     if retriever == "sbert":

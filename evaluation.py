@@ -160,6 +160,26 @@ def _sentence_hit_indices(chunk_text: str, sentences: List[str], min_token_recal
     return out
 
 
+_HPDOC_SENT_TAG_RE = re.compile(r"\[\[HPDOC:(?P<did>.+?)::S:(?P<sent_idx>\d+)\]\]")
+
+
+def _extract_tagged_support_facts(chunk_text: str) -> Set[Tuple[str, int]]:
+    out: Set[Tuple[str, int]] = set()
+    if not chunk_text:
+        return out
+    for m in _HPDOC_SENT_TAG_RE.finditer(chunk_text):
+        did = str(m.group("did")).strip()
+        sent_idx_str = str(m.group("sent_idx")).strip()
+        if not did:
+            continue
+        try:
+            sent_idx = int(sent_idx_str)
+        except ValueError:
+            continue
+        out.add((did, sent_idx))
+    return out
+
+
 def _build_chunk_to_sent_idxs(
     chunk_texts: Dict[str, str],
     chunk_to_doc: Dict[str, str],
@@ -185,7 +205,16 @@ def compute_hotpot_support_fact_coverage(
     hotpot_gold_facts: Dict[str, Set[Tuple[str, int]]],
     hotpot_doc_sentences: Dict[str, List[str]],
 ) -> Dict[str, Dict[str, float]]:
-    chunk_to_sent_idxs = _build_chunk_to_sent_idxs(chunk_texts, chunk_to_doc, hotpot_doc_sentences)
+    chunk_to_tagged_support: Dict[str, Set[Tuple[str, int]]] = {
+        cid: _extract_tagged_support_facts(chunk_text)
+        for cid, chunk_text in chunk_texts.items()
+    }
+    use_tagged_support = any(bool(v) for v in chunk_to_tagged_support.values())
+    chunk_to_sent_idxs = (
+        {}
+        if use_tagged_support
+        else _build_chunk_to_sent_idxs(chunk_texts, chunk_to_doc, hotpot_doc_sentences)
+    )
 
     qids = [qid for qid, gold in hotpot_gold_facts.items() if gold and qid in raw_chunk_results]
     n = max(1, len(qids))
@@ -198,6 +227,9 @@ def compute_hotpot_support_fact_coverage(
             ranked = sorted(raw_chunk_results.get(qid, {}).items(), key=lambda kv: kv[1], reverse=True)[:k]
             covered: Set[Tuple[str, int]] = set()
             for cid, _ in ranked:
+                if use_tagged_support:
+                    covered.update(chunk_to_tagged_support.get(cid, set()))
+                    continue
                 did = chunk_to_doc.get(cid)
                 if not did:
                     continue
@@ -222,7 +254,16 @@ def build_predicted_supporting_facts(
     top_k: int,
     max_facts: int,
 ) -> Dict[str, Set[Tuple[str, int]]]:
-    chunk_to_sent_idxs = _build_chunk_to_sent_idxs(chunk_texts, chunk_to_doc, hotpot_doc_sentences)
+    chunk_to_tagged_support: Dict[str, Set[Tuple[str, int]]] = {
+        cid: _extract_tagged_support_facts(chunk_text)
+        for cid, chunk_text in chunk_texts.items()
+    }
+    use_tagged_support = any(bool(v) for v in chunk_to_tagged_support.values())
+    chunk_to_sent_idxs = (
+        {}
+        if use_tagged_support
+        else _build_chunk_to_sent_idxs(chunk_texts, chunk_to_doc, hotpot_doc_sentences)
+    )
     out: Dict[str, Set[Tuple[str, int]]] = {}
     for qid in qids:
         ranked_chunks = sorted(
@@ -233,9 +274,12 @@ def build_predicted_supporting_facts(
         predicted_sp: List[Tuple[str, int]] = []
         seen_sp: Set[Tuple[str, int]] = set()
         for cid, _ in ranked_chunks:
-            did = chunk_to_doc.get(cid, "")
-            for sent_idx in sorted(chunk_to_sent_idxs.get(cid, set())):
-                sf = (did, sent_idx)
+            if use_tagged_support:
+                support_facts = sorted(chunk_to_tagged_support.get(cid, set()))
+            else:
+                did = chunk_to_doc.get(cid, "")
+                support_facts = [(did, sent_idx) for sent_idx in sorted(chunk_to_sent_idxs.get(cid, set()))]
+            for sf in support_facts:
                 if sf in seen_sp:
                     continue
                 seen_sp.add(sf)
