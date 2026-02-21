@@ -28,6 +28,10 @@ run_one() {
   local retriever="$1"
   local out="$2"
   local log_file="$3"
+  EVAL_GPU_ID=0 \
+  OLLAMA_KEEP_ALIVE=0 \
+  OLLAMA_MAX_LOADED_MODELS=1 \
+  OLLAMA_NUM_PARALLEL=1 \
   "${PYTHON_BIN}" cpu_hotpot_qasper_grid_eval.py \
     --mode 1 \
     --dataset-path-mode1 datasets/dev-v1.1.json \
