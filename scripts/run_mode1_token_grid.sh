@@ -41,7 +41,7 @@ for token_size in "${TOKEN_SIZES[@]}"; do
       --token-size "${token_size}" \
       --overlap "${overlap}" \
       --k 5 \
-      --max-queries 200 \
+      --max-queries 20 \
       --output "${OUT_FILE}" \
       > "${LOG_FILE}" 2>&1; then
       echo "FAILED: token_size=${token_size}, overlap=${overlap}. See ${LOG_FILE}"
