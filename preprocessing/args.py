@@ -11,6 +11,7 @@ from config import (
     EVAL_BATCH_SIZE,
     EVAL_CHUNKERS,
     EVAL_CHUNKING_MODE,
+    EVAL_CHAR_OVERLAP,
     EVAL_DATASET_PATH_MODE1,
     EVAL_DATASET_PATH_MODE2,
     EVAL_DATASET_PATH_MODE3,
@@ -112,6 +113,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--batch-size", type=int, default=EVAL_BATCH_SIZE)
     parser.add_argument("--token-size", type=int, default=EVAL_TOKEN_SIZE)
+    parser.add_argument("--char-overlap", type=int, default=EVAL_CHAR_OVERLAP)
     parser.add_argument("--overlap", type=int, default=EVAL_OVERLAP)
     parser.add_argument(
         "--chunkers",

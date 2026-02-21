@@ -63,6 +63,7 @@ EVAL_MAX_QUERIES = _env_int("EVAL_MAX_QUERIES", 0)
 EVAL_BATCH_SIZE = _env_int("EVAL_BATCH_SIZE", 32)
 EVAL_TOKEN_SIZE = _env_int("EVAL_TOKEN_SIZE", 256)
 EVAL_OVERLAP = _env_int("EVAL_OVERLAP", 64)
+EVAL_CHAR_OVERLAP = _env_int("EVAL_CHAR_OVERLAP", 150)
 EVAL_CHUNKERS = _env_csv(
     "EVAL_CHUNKERS",
     "token,sentence,recursive,semantic,late_token_pool",

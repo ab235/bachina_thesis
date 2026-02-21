@@ -311,9 +311,41 @@ def _chunk_sentence_eval(text: str, args: object, _sentence_embed_fn: Optional[o
     sentences = sentence_chunk(text)
     min_chars = max(1, int(args.min_chars))
     max_chars = max(min_chars, int(args.max_chars))
-    # Pack adjacent sentences into bounded chunks (up to max_chars),
-    # then merge tiny tails using min_chars.
-    return _merge_segments(sentences, min_chars=min_chars, max_chars=max_chars)
+    overlap = max(0, int(getattr(args, "char_overlap", args.overlap)))
+
+    if not sentences:
+        return []
+
+    # Greedily pack adjacent sentences up to max_chars, then carry a tail
+    # overlap into the next chunk.
+    chunks: List[str] = []
+    current_sentences: List[str] = []
+    current_len = 0
+    for sentence in sentences:
+        add_len = len(sentence) + (1 if current_sentences else 0)
+        if current_sentences and current_len + add_len > max_chars:
+            chunk_text = " ".join(current_sentences).strip()
+            if chunk_text:
+                chunks.append(chunk_text)
+            current_sentences = _carryover_overlap(current_sentences, overlap)
+            current_len = len(" ".join(current_sentences)) if current_sentences else 0
+
+        add_len = len(sentence) + (1 if current_sentences else 0)
+        if not current_sentences or current_len + add_len <= max_chars:
+            current_sentences.append(sentence)
+            current_len += add_len
+        else:
+            # Very long single sentence fallback.
+            chunks.append(sentence)
+            current_sentences = []
+            current_len = 0
+
+    if current_sentences:
+        chunk_text = " ".join(current_sentences).strip()
+        if chunk_text:
+            chunks.append(chunk_text)
+
+    return _enforce_min_chunks_by_chars(chunks, min_chars=min_chars)
 
 
 def _chunk_recursive_eval(text: str, args: object, _sentence_embed_fn: Optional[object]) -> List[str]:
@@ -322,7 +354,7 @@ def _chunk_recursive_eval(text: str, args: object, _sentence_embed_fn: Optional[
         text,
         min_chars=min_chars,
         max_chars=args.max_chars,
-        overlap=args.overlap,
+        overlap=max(0, int(getattr(args, "char_overlap", args.overlap))),
     )
 
 
@@ -330,7 +362,7 @@ def _chunk_semantic_eval(text: str, args: object, sentence_embed_fn: Optional[ob
     chunks = semantic_chunking(
         text,
         max_chars=args.max_chars,
-        overlap=args.overlap,
+        overlap=max(0, int(getattr(args, "char_overlap", args.overlap))),
         similarity_threshold=args.similarity_threshold,
         embed_fn=sentence_embed_fn,
         show_progress=False,
