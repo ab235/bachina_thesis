@@ -308,9 +308,12 @@ def _chunk_token_eval(text: str, args: object, _sentence_embed_fn: Optional[obje
 
 
 def _chunk_sentence_eval(text: str, args: object, _sentence_embed_fn: Optional[object]) -> List[str]:
-    chunks = sentence_chunk(text)
+    sentences = sentence_chunk(text)
     min_chars = max(1, int(args.min_chars))
-    return _enforce_min_chunks_by_chars(chunks, min_chars=min_chars)
+    max_chars = max(min_chars, int(args.max_chars))
+    # Pack adjacent sentences into bounded chunks (up to max_chars),
+    # then merge tiny tails using min_chars.
+    return _merge_segments(sentences, min_chars=min_chars, max_chars=max_chars)
 
 
 def _chunk_recursive_eval(text: str, args: object, _sentence_embed_fn: Optional[object]) -> List[str]:
