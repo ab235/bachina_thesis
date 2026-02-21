@@ -423,12 +423,12 @@ class LateTokenPoolEncoder:
         target_size: int,
         overlap: int,
         min_size: int = 0,
-    ) -> Tuple[List[str], List[np.ndarray], bool]:
+    ) -> Tuple[List[str], List[np.ndarray], List[Tuple[int, int]], bool]:
         model_text = f"passage: {text}" if self.use_e5_format else text
         ids = self.tokenizer.encode(model_text, add_special_tokens=False, truncation=False)
         over_model_max = len(ids) > self.max_content_tokens
         if not ids:
-            return [], [], over_model_max
+            return [], [], [], over_model_max
         if target_size <= 0:
             raise ValueError("target_size must be > 0")
         if overlap >= target_size:
@@ -441,6 +441,8 @@ class LateTokenPoolEncoder:
 
         chunks: List[str] = []
         vecs: List[np.ndarray] = []
+        spans: List[Tuple[int, int]] = []
+        offsets = self.tokenizer(model_text, add_special_tokens=False, return_offsets_mapping=True)["offset_mapping"]
         i = 0
         n = len(ids)
         while i < n:
@@ -453,6 +455,15 @@ class LateTokenPoolEncoder:
                 chunk_text = chunk_text[len("passage:"):].strip()
             if chunk_text:
                 chunks.append(chunk_text)
+                # Map token-window to original text offsets.
+                span_start = int(offsets[i][0]) if i < len(offsets) else 0
+                span_end = int(offsets[j - 1][1]) if (j - 1) < len(offsets) else span_start
+                # Remove e5 "passage: " prefix from offsets.
+                if self.use_e5_format:
+                    prefix_chars = len("passage: ")
+                    span_start = max(0, span_start - prefix_chars)
+                    span_end = max(0, span_end - prefix_chars)
+                spans.append((span_start, span_end))
                 span_start = max(i, prefix_len) if self.use_e5_format else i
                 span_vecs = token_vecs[span_start:j]
                 if self.use_e5_format and prefix_len > 0 and prefix_sum is not None:
@@ -467,4 +478,4 @@ class LateTokenPoolEncoder:
             if j == n:
                 break
             i = j - overlap
-        return chunks, vecs, over_model_max
+        return chunks, vecs, spans, over_model_max

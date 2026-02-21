@@ -78,6 +78,50 @@ def token_chunk(
     return chunks
 
 
+def token_chunk_with_spans(
+    text: str,
+    target_size: int = 200,
+    overlap: int = 0,
+) -> List[Tuple[str, int, int]]:
+    text = text.strip()
+    if not text:
+        return []
+    tokens = word_tokenize(text)
+    if target_size <= 0:
+        raise ValueError("target_size must be > 0")
+    if overlap >= target_size:
+        raise ValueError("overlap must be < target_size")
+    if not tokens:
+        return []
+
+    token_starts: List[int] = []
+    token_ends: List[int] = []
+    cursor = 0
+    for tok in tokens:
+        pos = text.find(tok, cursor)
+        if pos < 0:
+            pos = text.find(tok)
+        if pos < 0:
+            pos = cursor
+        token_starts.append(pos)
+        end = pos + len(tok)
+        token_ends.append(end)
+        cursor = end
+
+    out: List[Tuple[str, int, int]] = []
+    i = 0
+    n = len(tokens)
+    while i < n:
+        j = min(i + target_size, n)
+        chunk_text = " ".join(tokens[i:j]).strip()
+        if chunk_text:
+            out.append((chunk_text, token_starts[i], token_ends[j - 1]))
+        if j == n:
+            break
+        i = j - overlap
+    return out
+
+
 def _enforce_min_chunks_by_chars(chunks: List[str], min_chars: int) -> List[str]:
     if min_chars <= 0:
         return [c for c in chunks if c and c.strip()]
@@ -400,12 +444,13 @@ def build_late_token_pool_chunks(
 ) -> LateChunkData:
     chunk_texts: Dict[str, str] = {}
     chunk_to_doc: Dict[str, str] = {}
+    chunk_spans: Dict[str, Tuple[int, int]] = {}
     chunk_vectors: Dict[str, np.ndarray] = {}
     truncated_docs = 0
     for doc_id, joined in tqdm(doc_texts.items(), desc=desc, leave=False):
         if not joined:
             continue
-        chunks, vecs, truncated = encoder.build_doc_chunks(
+        chunks, vecs, spans, truncated = encoder.build_doc_chunks(
             joined,
             target_size=args.token_size,
             overlap=args.overlap,
@@ -413,17 +458,79 @@ def build_late_token_pool_chunks(
         )
         if truncated:
             truncated_docs += 1
-        for idx, (chunk_text_value, vec) in enumerate(zip(chunks, vecs)):
+        for idx, (chunk_text_value, vec, span) in enumerate(zip(chunks, vecs, spans)):
             cid = f"{doc_id}#chunk{idx}"
             chunk_texts[cid] = chunk_text_value
             chunk_to_doc[cid] = doc_id
+            chunk_spans[cid] = span
             chunk_vectors[cid] = vec
     return LateChunkData(
         chunk_texts=chunk_texts,
         chunk_to_doc=chunk_to_doc,
+        chunk_spans=chunk_spans,
         chunk_vectors=chunk_vectors,
         truncated_docs=truncated_docs,
     )
+
+
+def chunk_corpus_for_eval_with_spans(
+    corpus: Dict[str, Dict[str, str]],
+    chunker: str,
+    args: object,
+    sentence_embed_fn: Optional[object] = None,
+) -> Tuple[Dict[str, str], Dict[str, str], Dict[str, Tuple[int, int]]]:
+    chunk_texts: Dict[str, str] = {}
+    chunk_to_doc: Dict[str, str] = {}
+    chunk_spans: Dict[str, Tuple[int, int]] = {}
+    for doc_id, doc in tqdm(corpus.items(), desc=f"Chunking ({chunker})", leave=False):
+        joined = join_doc(doc)
+        if not joined:
+            continue
+        if chunker == "token":
+            chunks_with_spans = token_chunk_with_spans(
+                joined,
+                target_size=args.token_size,
+                overlap=args.overlap,
+            )
+            min_tokens = max(1, int(args.token_size) // 2)
+            merged: List[Tuple[str, int, int]] = []
+            i = 0
+            while i < len(chunks_with_spans):
+                cur_text, cur_start, cur_end = chunks_with_spans[i]
+                i += 1
+                while len(word_tokenize(cur_text)) < min_tokens and i < len(chunks_with_spans):
+                    nxt_text, _nxt_start, nxt_end = chunks_with_spans[i]
+                    cur_text = f"{cur_text} {nxt_text}".strip()
+                    cur_end = nxt_end
+                    i += 1
+                merged.append((cur_text, cur_start, cur_end))
+            if len(merged) >= 2 and len(word_tokenize(merged[-1][0])) < min_tokens:
+                prev_text, prev_start, _prev_end = merged[-2]
+                last_text, _last_start, last_end = merged[-1]
+                merged[-2] = (f"{prev_text} {last_text}".strip(), prev_start, last_end)
+                merged.pop()
+            chunks = [c for c, _s, _e in merged]
+            spans = [(s, e) for _c, s, e in merged]
+        else:
+            chunks = chunk_text_for_eval(joined, chunker=chunker, args=args, sentence_embed_fn=sentence_embed_fn)
+            spans = []
+        cursor = 0
+        for i, c in enumerate(chunks):
+            cid = f"{doc_id}#chunk{i}"
+            chunk_texts[cid] = c
+            chunk_to_doc[cid] = doc_id
+            if i < len(spans):
+                chunk_spans[cid] = spans[i]
+                continue
+            start = joined.find(c, max(0, cursor - 256))
+            if start < 0:
+                start = joined.find(c)
+            if start < 0:
+                continue
+            end = start + len(c)
+            cursor = start
+            chunk_spans[cid] = (start, end)
+    return chunk_texts, chunk_to_doc, chunk_spans
 
 
 def chunk_corpus_for_eval(

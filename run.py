@@ -6,7 +6,12 @@ from typing import Dict, List, Optional, Set, Tuple
 import numpy as np
 from tqdm import tqdm
 
-from chunking import build_late_token_pool_chunks, chunk_corpus_for_eval, chunk_text_for_eval, join_doc
+from chunking import (
+    build_late_token_pool_chunks,
+    chunk_corpus_for_eval,
+    chunk_corpus_for_eval_with_spans,
+    join_doc,
+)
 from embeddings import (
     E5Embedder,
     LateTokenPoolEncoder,
@@ -52,6 +57,7 @@ def _build_chunk_support_facts_from_provenance(
     corpus: Dict[str, Dict[str, str]],
     chunk_texts: Dict[str, str],
     chunk_to_doc: Dict[str, str],
+    chunk_spans: Optional[Dict[str, Tuple[int, int]]] = None,
 ) -> Optional[Dict[str, Set[Tuple[str, int]]]]:
     docs_with_provenance = {
         did: doc
@@ -94,17 +100,20 @@ def _build_chunk_support_facts_from_provenance(
         spans.sort(key=lambda x: x[0])
         cursor = 0
         for cid in sorted(chunk_ids, key=_chunk_sort_key):
-            chunk = chunk_texts.get(cid, "")
-            if not chunk:
-                continue
-            window_start = max(0, cursor - 256)
-            start = joined.find(chunk, window_start)
-            if start < 0:
-                start = joined.find(chunk)
-            if start < 0:
-                continue
-            end = start + len(chunk)
-            cursor = start
+            if chunk_spans is not None and cid in chunk_spans:
+                start, end = chunk_spans[cid]
+            else:
+                chunk = chunk_texts.get(cid, "")
+                if not chunk:
+                    continue
+                window_start = max(0, cursor - 256)
+                start = joined.find(chunk, window_start)
+                if start < 0:
+                    start = joined.find(chunk)
+                if start < 0:
+                    continue
+                end = start + len(chunk)
+                cursor = start
             facts: Set[Tuple[str, int]] = set()
             for s_start, s_end, src_did, sent_idx in spans:
                 if s_end <= start:
@@ -122,12 +131,14 @@ def _separate_support_metadata(
     corpus: Dict[str, Dict[str, str]],
     chunk_texts: Dict[str, str],
     chunk_to_doc: Dict[str, str],
+    chunk_spans: Optional[Dict[str, Tuple[int, int]]] = None,
 ) -> Tuple[Dict[str, str], Optional[Dict[str, Set[Tuple[str, int]]]]]:
     cleaned: Dict[str, str] = {}
     support = _build_chunk_support_facts_from_provenance(
         corpus=corpus,
         chunk_texts=chunk_texts,
         chunk_to_doc=chunk_to_doc,
+        chunk_spans=chunk_spans,
     )
     use_marker_fallback = support is None
     marker_support: Dict[str, Set[Tuple[str, int]]] = {}
@@ -211,6 +222,7 @@ def run_early_mode(
     coverage_chunk_texts: Dict[str, str] = {}
     coverage_chunk_to_doc: Dict[str, str] = {}
     coverage_chunk_support_facts: Optional[Dict[str, Set[Tuple[str, int]]]] = None
+    coverage_chunk_spans: Optional[Dict[str, Tuple[int, int]]] = None
 
     if retriever in {"sbert", "e5"}:
         if chunker == "late_token_pool":
@@ -227,6 +239,7 @@ def run_early_mode(
                 corpus=corpus,
                 chunk_texts=late_data.chunk_texts,
                 chunk_to_doc=late_data.chunk_to_doc,
+                chunk_spans=late_data.chunk_spans,
             )
             if late_data.truncated_docs:
                 import logging
@@ -253,9 +266,10 @@ def run_early_mode(
                 coverage_chunk_texts = late_chunk_texts
                 coverage_chunk_to_doc = late_data.chunk_to_doc
                 coverage_chunk_support_facts = late_chunk_support_facts
+                coverage_chunk_spans = late_data.chunk_spans
         else:
             sentence_embed_fn = build_sentence_embed_fn(args) if chunker == "semantic" else None
-            chunk_texts, chunk_to_doc = chunk_corpus_for_eval(
+            chunk_texts, chunk_to_doc, chunk_spans = chunk_corpus_for_eval_with_spans(
                 corpus,
                 chunker=chunker,
                 args=args,
@@ -265,6 +279,7 @@ def run_early_mode(
                 corpus=corpus,
                 chunk_texts=chunk_texts,
                 chunk_to_doc=chunk_to_doc,
+                chunk_spans=chunk_spans,
             )
             results = retrieve_dense(
                 queries=queries,
@@ -288,6 +303,7 @@ def run_early_mode(
                 coverage_chunk_texts = chunk_texts
                 coverage_chunk_to_doc = chunk_to_doc
                 coverage_chunk_support_facts = chunk_support_facts
+                coverage_chunk_spans = chunk_spans
     elif retriever in {"bm25", "bm25s"}:
         if chunker == "late_token_pool":
             if ctx.late_pool_encoder is None:
@@ -303,6 +319,7 @@ def run_early_mode(
                 corpus=corpus,
                 chunk_texts=late_data.chunk_texts,
                 chunk_to_doc=late_data.chunk_to_doc,
+                chunk_spans=late_data.chunk_spans,
             )
             if late_data.truncated_docs:
                 import logging
@@ -329,9 +346,10 @@ def run_early_mode(
                 coverage_chunk_texts = late_chunk_texts
                 coverage_chunk_to_doc = late_data.chunk_to_doc
                 coverage_chunk_support_facts = late_chunk_support_facts
+                coverage_chunk_spans = late_data.chunk_spans
         else:
             sentence_embed_fn = build_sentence_embed_fn(args) if chunker == "semantic" else None
-            chunk_texts, chunk_to_doc = chunk_corpus_for_eval(
+            chunk_texts, chunk_to_doc, chunk_spans = chunk_corpus_for_eval_with_spans(
                 corpus,
                 chunker=chunker,
                 args=args,
@@ -341,6 +359,7 @@ def run_early_mode(
                 corpus=corpus,
                 chunk_texts=chunk_texts,
                 chunk_to_doc=chunk_to_doc,
+                chunk_spans=chunk_spans,
             )
             results = retrieve_bm25(
                 queries=queries,
@@ -360,6 +379,7 @@ def run_early_mode(
                 coverage_chunk_texts = chunk_texts
                 coverage_chunk_to_doc = chunk_to_doc
                 coverage_chunk_support_facts = chunk_support_facts
+                coverage_chunk_spans = chunk_spans
     else:
         raise ValueError(f"Unsupported retriever: {retriever}")
 
@@ -369,6 +389,7 @@ def run_early_mode(
         coverage_chunk_texts=coverage_chunk_texts,
         coverage_chunk_to_doc=coverage_chunk_to_doc,
         coverage_chunk_support_facts=coverage_chunk_support_facts,
+        coverage_chunk_spans=coverage_chunk_spans,
         num_chunks=num_chunks,
     )
 
@@ -423,6 +444,7 @@ def run_hierarchical_mode(
     late_chunk_to_doc: Dict[str, str] = {}
     late_chunk_vectors: Dict[str, np.ndarray] = {}
     late_chunk_support_facts: Optional[Dict[str, Set[Tuple[str, int]]]] = None
+    late_chunk_spans: Dict[str, Tuple[int, int]] = {}
     if chunker == "late_token_pool":
         if ctx.late_pool_encoder is None:
             raise RuntimeError("late_token_pool encoder was not initialized.")
@@ -443,36 +465,27 @@ def run_hierarchical_mode(
         late_chunk_texts = late_data.chunk_texts
         late_chunk_to_doc = late_data.chunk_to_doc
         late_chunk_vectors = late_data.chunk_vectors
+        late_chunk_spans = late_data.chunk_spans
         late_chunk_texts, late_chunk_support_facts = _separate_support_metadata(
             corpus=corpus,
             chunk_texts=late_chunk_texts,
             chunk_to_doc=late_chunk_to_doc,
+            chunk_spans=late_chunk_spans,
         )
     else:
         sentence_embed_fn = build_sentence_embed_fn(args) if chunker == "semantic" else None
-        for doc_id in tqdm(
-            needed_docs,
-            total=len(needed_docs),
-            desc=f"Hierarchical chunk build ({chunker})",
-            leave=False,
-        ):
-            joined = doc_texts.get(doc_id, "")
-            if not joined:
-                continue
-            chunks = chunk_text_for_eval(
-                joined,
-                chunker=chunker,
-                args=args,
-                sentence_embed_fn=sentence_embed_fn,
-            )
-            for idx, chunk in enumerate(chunks):
-                cid = f"{doc_id}#chunk{idx}"
-                late_chunk_texts[cid] = chunk
-                late_chunk_to_doc[cid] = doc_id
+        sub_corpus = {doc_id: corpus[doc_id] for doc_id in needed_docs if doc_id in corpus}
+        late_chunk_texts, late_chunk_to_doc, late_chunk_spans = chunk_corpus_for_eval_with_spans(
+            sub_corpus,
+            chunker=chunker,
+            args=args,
+            sentence_embed_fn=sentence_embed_fn,
+        )
         late_chunk_texts, late_chunk_support_facts = _separate_support_metadata(
             corpus=corpus,
             chunk_texts=late_chunk_texts,
             chunk_to_doc=late_chunk_to_doc,
+            chunk_spans=late_chunk_spans if late_chunk_spans else None,
         )
 
     if retriever in {"sbert", "e5"}:
@@ -547,6 +560,7 @@ def run_hierarchical_mode(
         coverage_chunk_texts=late_chunk_texts,
         coverage_chunk_to_doc=late_chunk_to_doc,
         coverage_chunk_support_facts=late_chunk_support_facts,
+        coverage_chunk_spans=late_chunk_spans if late_chunk_spans else None,
         num_chunks=len(late_chunk_texts),
     )
 

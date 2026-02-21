@@ -21,6 +21,7 @@ class RetrievalArtifacts:
     coverage_chunk_texts: Dict[str, str]
     coverage_chunk_to_doc: Dict[str, str]
     coverage_chunk_support_facts: Optional[Dict[str, Set[Tuple[str, int]]]]
+    coverage_chunk_spans: Optional[Dict[str, Tuple[int, int]]]
     num_chunks: int
 
 
@@ -42,5 +43,6 @@ class EvaluationInputs:
 class LateChunkData:
     chunk_texts: Dict[str, str]
     chunk_to_doc: Dict[str, str]
+    chunk_spans: Dict[str, Tuple[int, int]]
     chunk_vectors: Dict[str, np.ndarray]
     truncated_docs: int
