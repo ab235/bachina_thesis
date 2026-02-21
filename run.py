@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
 from time import perf_counter
 import re
+import json
+import os
 from typing import Dict, List, Optional, Set, Tuple
 
 import numpy as np
@@ -41,6 +43,84 @@ from datatypes import RetrievalArtifacts, RetrieverContext
 
 def topk_rank(scores: Dict[str, float], k: int) -> List[str]:
     return [d for d, _ in sorted(scores.items(), key=lambda kv: kv[1], reverse=True)[:k]]
+
+
+def _maybe_dump_support_debug(
+    dataset_name: str,
+    queries: Dict[str, str],
+    artifacts: RetrievalArtifacts,
+    hotpot_gold_facts: Optional[Dict[str, Set[Tuple[str, int]]]],
+    hotpot_answers: Optional[Dict[str, List[str]]],
+    pred_answers: Optional[Dict[str, str]],
+    top_k: int,
+) -> None:
+    dump_path = os.getenv("EVAL_DEBUG_SUPPORT_DUMP", "").strip()
+    if not dump_path:
+        return
+    if not hotpot_gold_facts:
+        return
+    if dataset_name not in {"hotpotqa_distractor", "hotpotqa_fullwiki", "hotpotqa_fullwiki_stitched"}:
+        return
+
+    try:
+        max_qids = int(os.getenv("EVAL_DEBUG_SUPPORT_QIDS", "3"))
+    except ValueError:
+        max_qids = 3
+    max_qids = max(1, max_qids)
+
+    qids = [
+        qid
+        for qid in queries
+        if qid in hotpot_gold_facts and hotpot_gold_facts.get(qid) and qid in artifacts.coverage_raw_chunks
+    ][:max_qids]
+    if not qids:
+        return
+
+    predicted = build_predicted_supporting_facts(
+        raw_chunk_results=artifacts.coverage_raw_chunks,
+        chunk_texts=artifacts.coverage_chunk_texts,
+        chunk_to_doc=artifacts.coverage_chunk_to_doc,
+        hotpot_doc_sentences={},
+        qids=qids,
+        top_k=max(1, int(top_k)),
+        max_facts=500,
+        chunk_support_facts=artifacts.coverage_chunk_support_facts,
+    )
+
+    rows = []
+    for qid in qids:
+        ranked = sorted(
+            artifacts.coverage_raw_chunks.get(qid, {}).items(),
+            key=lambda kv: kv[1],
+            reverse=True,
+        )[: max(1, int(top_k))]
+        chunk_rows = [
+            {
+                "chunk_id": cid,
+                "score": float(score),
+                "chunk_text": artifacts.coverage_chunk_texts.get(cid, ""),
+            }
+            for cid, score in ranked
+        ]
+        rows.append(
+            {
+                "qid": qid,
+                "question": queries.get(qid, ""),
+                "gold_answer_aliases": list((hotpot_answers or {}).get(qid, [])),
+                "predicted_answer": str((pred_answers or {}).get(qid, "")),
+                "top_k_chunks": chunk_rows,
+                "predicted_support_facts": sorted(list(predicted.get(qid, set()))),
+                "gold_support_facts": sorted(list((hotpot_gold_facts or {}).get(qid, set()))),
+            }
+        )
+
+    payload = {
+        "dataset": dataset_name,
+        "top_k": int(top_k),
+        "rows": rows,
+    }
+    with open(dump_path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2)
 
 
 def _chunk_sort_key(cid: str) -> Tuple[int, str]:
@@ -577,6 +657,7 @@ def compute_metrics_bundle(
     hotpot_answers: Optional[Dict[str, List[str]]],
 ) -> Dict[str, object]:
     mode1_style_eval_datasets = {"squad_v11", "hotpotqa_fullwiki_stitched"}
+    debug_pred_answers: Dict[str, str] = {}
     metrics: Dict[str, object] = {
         "chunk_recall": recall_at_k_from_top_chunks(
             raw_chunk_results=artifacts.coverage_raw_chunks,
@@ -627,6 +708,7 @@ def compute_metrics_bundle(
                 bedrock_model_id=args.bedrock_model_id,
                 bedrock_region=args.bedrock_region,
             )
+            debug_pred_answers.update(predicted_answers)
             predicted_sp_doc = build_predicted_supporting_facts(
                 raw_chunk_results=artifacts.coverage_raw_chunks,
                 chunk_texts=artifacts.coverage_chunk_texts,
@@ -681,6 +763,7 @@ def compute_metrics_bundle(
                 bedrock_region=args.bedrock_region,
                 prompt_style="squad",
             )
+            debug_pred_answers.update(predicted_answers)
             metrics["squad_rag_generated_emf1"] = score_squad_predictions(
                 pred_answers=predicted_answers,
                 gold_answers=hotpot_answers or {},
@@ -691,6 +774,15 @@ def compute_metrics_bundle(
                 "label": "SQuAD RAG-generated EM/F1 (official normalization)",
                 "num_scored": 0,
             }
+    _maybe_dump_support_debug(
+        dataset_name=dataset_name,
+        queries=queries,
+        artifacts=artifacts,
+        hotpot_gold_facts=hotpot_gold_facts,
+        hotpot_answers=hotpot_answers,
+        pred_answers=debug_pred_answers,
+        top_k=max(1, int(args.hotpot_answer_top_k)),
+    )
     return metrics
 
 

@@ -11,10 +11,13 @@ PYTHON_BIN="${PYTHON_BIN:-python3}"
 LOG_DIR="logs"
 OUT_FILE="results/mode4_smoke_check.json"
 LOG_FILE="${LOG_DIR}/mode4_smoke_check.log"
+DEBUG_FILE="results/mode4_smoke_support_debug.json"
 
 mkdir -p "${LOG_DIR}" "$(dirname "${OUT_FILE}")"
 
 EVAL_GPU_ID=0 \
+EVAL_DEBUG_SUPPORT_DUMP="${DEBUG_FILE}" \
+EVAL_DEBUG_SUPPORT_QIDS=3 \
 OLLAMA_KEEP_ALIVE=0 \
 OLLAMA_MAX_LOADED_MODELS=1 \
 OLLAMA_NUM_PARALLEL=1 \
@@ -34,3 +37,4 @@ OLLAMA_NUM_PARALLEL=1 \
 echo "Smoke check complete."
 echo "Output: ${OUT_FILE}"
 echo "Log: ${LOG_FILE}"
+echo "Support debug: ${DEBUG_FILE}"
