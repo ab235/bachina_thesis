@@ -162,6 +162,9 @@ def _sentence_hit_indices(chunk_text: str, sentences: List[str], min_token_recal
 
 _HPDOC_SENT_TAG_RE = re.compile(r"\[\[HPDOC:(?P<did>.+?)::S:(?P<sent_idx>\d+)\]\]")
 _HPDOC_SENT_MARKER_RE = re.compile(r"\bHPDOC_(?P<did>[A-Za-z0-9_]+)_HPSENT_(?P<sent_idx>\d+)\b")
+_HPDOC_SENT_HEX_MARKER_RE = re.compile(
+    r"\bHPDOCHEX_(?P<did_hex>[0-9a-fA-F]+)_HPSENT_(?P<sent_idx>\d+)\b"
+)
 
 
 def _extract_tagged_support_facts(chunk_text: str) -> Set[Tuple[str, int]]:
@@ -190,6 +193,19 @@ def _extract_tagged_support_facts(chunk_text: str) -> Set[Tuple[str, int]]:
         except ValueError:
             continue
         out.add((did, sent_idx))
+    # Lossless hex markers.
+    for m in _HPDOC_SENT_HEX_MARKER_RE.finditer(chunk_text):
+        did_hex = str(m.group("did_hex")).strip()
+        sent_idx_str = str(m.group("sent_idx")).strip()
+        if not did_hex:
+            continue
+        try:
+            did = bytes.fromhex(did_hex).decode("utf-8", errors="ignore")
+            sent_idx = int(sent_idx_str)
+        except Exception:
+            continue
+        if did:
+            out.add((did, sent_idx))
     return out
 
 
