@@ -172,6 +172,71 @@ def sentence_chunk(text: str) -> List[str]:
     return [s.strip() for s in sent_tokenize(text) if s.strip()]
 
 
+def _sentences_with_spans(text: str) -> List[Tuple[str, int, int]]:
+    text = text.strip()
+    if not text:
+        return []
+    sents = [s.strip() for s in sent_tokenize(text) if s.strip()]
+    out: List[Tuple[str, int, int]] = []
+    cursor = 0
+    for s in sents:
+        start = text.find(s, cursor)
+        if start < 0:
+            start = text.find(s)
+        if start < 0:
+            continue
+        end = start + len(s)
+        out.append((s, start, end))
+        cursor = end
+    return out
+
+
+def _enforce_min_span_chunks_by_chars(
+    chunks: List[Tuple[str, int, int]],
+    min_chars: int,
+) -> List[Tuple[str, int, int]]:
+    if min_chars <= 0:
+        return [c for c in chunks if c[0].strip()]
+    cleaned = [(t.strip(), s, e) for t, s, e in chunks if t and t.strip()]
+    if not cleaned:
+        return []
+    out: List[Tuple[str, int, int]] = []
+    i = 0
+    while i < len(cleaned):
+        cur_t, cur_s, cur_e = cleaned[i]
+        i += 1
+        while len(cur_t) < min_chars and i < len(cleaned):
+            nxt_t, _nxt_s, nxt_e = cleaned[i]
+            cur_t = f"{cur_t} {nxt_t}".strip()
+            cur_e = nxt_e
+            i += 1
+        out.append((cur_t, cur_s, cur_e))
+    if len(out) >= 2 and len(out[-1][0]) < min_chars:
+        prev_t, prev_s, _prev_e = out[-2]
+        last_t, _last_s, last_e = out[-1]
+        out[-2] = (f"{prev_t} {last_t}".strip(), prev_s, last_e)
+        out.pop()
+    return out
+
+
+def _carryover_overlap_sentence_spans(
+    sentences: List[Tuple[str, int, int]],
+    overlap: int,
+) -> List[Tuple[str, int, int]]:
+    if overlap <= 0:
+        return []
+    selected: List[Tuple[str, int, int]] = []
+    total = 0
+    for sent in reversed(sentences):
+        s_text = sent[0]
+        size = len(s_text) + (1 if selected else 0)
+        selected.append(sent)
+        total += size
+        if total >= overlap:
+            break
+    return list(reversed(selected))
+
+
 def _merge_segments(segments: Iterable[str], min_chars: int, max_chars: int,) -> List[str]:
     '''
     For remerging segments that are below a minimum length
@@ -241,6 +306,56 @@ def recursive_chunk(
     )
     chunks = splitter.split_text(text)
     return _merge_segments(chunks, min_chars=min_chars, max_chars=max_chars)#ensure each chunk is between min_chars and max_chars
+
+
+def recursive_chunk_with_spans(
+    text: str,
+    min_chars: int = 200,
+    max_chars: int = 1200,
+    overlap: int = 0,
+) -> List[Tuple[str, int, int]]:
+    text = text.strip()
+    if not text:
+        return []
+    out: List[Tuple[str, int, int]] = []
+    try:
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=max_chars,
+            chunk_overlap=overlap,
+            separators=["\n\n", "\n", ". ", " ", ""],
+            add_start_index=True,
+        )
+        docs = splitter.create_documents([text])
+        for d in docs:
+            chunk = (d.page_content or "").strip()
+            if not chunk:
+                continue
+            start = int(d.metadata.get("start_index", -1))
+            if start < 0:
+                continue
+            end = start + len(chunk)
+            out.append((chunk, start, end))
+    except TypeError:
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=max_chars,
+            chunk_overlap=overlap,
+            separators=["\n\n", "\n", ". ", " ", ""],
+        )
+        chunks = splitter.split_text(text)
+        cursor = 0
+        for chunk in chunks:
+            c = chunk.strip()
+            if not c:
+                continue
+            start = text.find(c, max(0, cursor - overlap))
+            if start < 0:
+                start = text.find(c)
+            if start < 0:
+                continue
+            end = start + len(c)
+            out.append((c, start, end))
+            cursor = start
+    return _enforce_min_span_chunks_by_chars(out, min_chars=min_chars)
 
 
 
@@ -336,6 +451,95 @@ def semantic_chunking(
     return chunks
 
 
+def semantic_chunking_with_spans(
+    text: str,
+    max_chars: int = 1200,
+    overlap: int = 200,
+    similarity_threshold: float = 0.6,
+    embed_fn: Optional[Callable[[List[str]], List[List[float]]]] = None,
+    show_progress: bool = False,
+) -> List[Tuple[str, int, int]]:
+    text = text.strip()
+    if not text:
+        return []
+    sent_spans = _sentences_with_spans(text)
+    if not sent_spans:
+        return []
+    sentences = [s for s, _st, _en in sent_spans]
+    embedding_function = embed_fn or embed_texts
+    embeddings = embedding_function(sentences)
+
+    chunks: List[Tuple[str, int, int]] = []
+    current: List[Tuple[str, int, int]] = []
+    current_len = 0
+    prev_embedding = None
+    iterator = zip(sent_spans, embeddings)
+    if show_progress:
+        iterator = tqdm(iterator, total=len(sent_spans), desc="Chunking...")
+    for (sentence, s_start, s_end), emb in iterator:
+        added_length = len(sentence) + 1
+        if prev_embedding is None:
+            prev_embedding = emb
+            current.append((sentence, s_start, s_end))
+            current_len += added_length
+            continue
+        similarity = cosine_similarity(prev_embedding, emb)
+        should_split = similarity < similarity_threshold or (current_len + added_length > max_chars)
+        if should_split and current:
+            chunk_text = " ".join([s for s, _a, _b in current]).strip()
+            if chunk_text:
+                chunks.append((chunk_text, current[0][1], current[-1][2]))
+            current = _carryover_overlap_sentence_spans(current, overlap)
+            current_len = len(" ".join([s for s, _a, _b in current])) if current else 0
+        current.append((sentence, s_start, s_end))
+        current_len += added_length
+        prev_embedding = emb
+
+    if current:
+        chunk_text = " ".join([s for s, _a, _b in current]).strip()
+        if chunk_text:
+            chunks.append((chunk_text, current[0][1], current[-1][2]))
+    return chunks
+
+
+def sentence_chunk_with_spans(
+    text: str,
+    min_chars: int,
+    max_chars: int,
+    overlap: int,
+) -> List[Tuple[str, int, int]]:
+    sent_spans = _sentences_with_spans(text)
+    if not sent_spans:
+        return []
+    chunks: List[Tuple[str, int, int]] = []
+    current: List[Tuple[str, int, int]] = []
+    current_len = 0
+    for sentence, s_start, s_end in sent_spans:
+        add_len = len(sentence) + (1 if current else 0)
+        if current and current_len + add_len > max_chars:
+            chunk_text = " ".join([s for s, _a, _b in current]).strip()
+            if chunk_text:
+                chunks.append((chunk_text, current[0][1], current[-1][2]))
+            current = _carryover_overlap_sentence_spans(current, overlap)
+            current_len = len(" ".join([s for s, _a, _b in current])) if current else 0
+
+        add_len = len(sentence) + (1 if current else 0)
+        if not current or current_len + add_len <= max_chars:
+            current.append((sentence, s_start, s_end))
+            current_len += add_len
+        else:
+            chunks.append((sentence, s_start, s_end))
+            current = []
+            current_len = 0
+
+    if current:
+        chunk_text = " ".join([s for s, _a, _b in current]).strip()
+        if chunk_text:
+            chunks.append((chunk_text, current[0][1], current[-1][2]))
+
+    return _enforce_min_span_chunks_by_chars(chunks, min_chars=min_chars)
+
+
 def join_doc(doc: Dict[str, str]) -> str:
     title = doc.get("title", "") or ""
     text = doc.get("text", "") or ""
@@ -352,58 +556,34 @@ def _chunk_token_eval(text: str, args: object, _sentence_embed_fn: Optional[obje
 
 
 def _chunk_sentence_eval(text: str, args: object, _sentence_embed_fn: Optional[object]) -> List[str]:
-    sentences = sentence_chunk(text)
     min_chars = max(1, int(args.min_chars))
     max_chars = max(min_chars, int(args.max_chars))
     overlap = max(0, int(getattr(args, "char_overlap", args.overlap)))
-
-    if not sentences:
-        return []
-
-    # Greedily pack adjacent sentences up to max_chars, then carry a tail
-    # overlap into the next chunk.
-    chunks: List[str] = []
-    current_sentences: List[str] = []
-    current_len = 0
-    for sentence in sentences:
-        add_len = len(sentence) + (1 if current_sentences else 0)
-        if current_sentences and current_len + add_len > max_chars:
-            chunk_text = " ".join(current_sentences).strip()
-            if chunk_text:
-                chunks.append(chunk_text)
-            current_sentences = _carryover_overlap(current_sentences, overlap)
-            current_len = len(" ".join(current_sentences)) if current_sentences else 0
-
-        add_len = len(sentence) + (1 if current_sentences else 0)
-        if not current_sentences or current_len + add_len <= max_chars:
-            current_sentences.append(sentence)
-            current_len += add_len
-        else:
-            # Very long single sentence fallback.
-            chunks.append(sentence)
-            current_sentences = []
-            current_len = 0
-
-    if current_sentences:
-        chunk_text = " ".join(current_sentences).strip()
-        if chunk_text:
-            chunks.append(chunk_text)
-
-    return _enforce_min_chunks_by_chars(chunks, min_chars=min_chars)
+    return [
+        c for c, _s, _e in sentence_chunk_with_spans(
+            text=text,
+            min_chars=min_chars,
+            max_chars=max_chars,
+            overlap=overlap,
+        )
+    ]
 
 
 def _chunk_recursive_eval(text: str, args: object, _sentence_embed_fn: Optional[object]) -> List[str]:
     min_chars = max(1, int(args.min_chars))
-    return recursive_chunk(
-        text,
-        min_chars=min_chars,
-        max_chars=args.max_chars,
-        overlap=max(0, int(getattr(args, "char_overlap", args.overlap))),
-    )
+    return [
+        c for c, _s, _e in recursive_chunk_with_spans(
+            text,
+            min_chars=min_chars,
+            max_chars=args.max_chars,
+            overlap=max(0, int(getattr(args, "char_overlap", args.overlap))),
+        )
+    ]
 
 
 def _chunk_semantic_eval(text: str, args: object, sentence_embed_fn: Optional[object]) -> List[str]:
-    chunks = semantic_chunking(
+    min_chars = max(1, int(args.min_chars))
+    chunks = semantic_chunking_with_spans(
         text,
         max_chars=args.max_chars,
         overlap=max(0, int(getattr(args, "char_overlap", args.overlap))),
@@ -411,8 +591,8 @@ def _chunk_semantic_eval(text: str, args: object, sentence_embed_fn: Optional[ob
         embed_fn=sentence_embed_fn,
         show_progress=False,
     )
-    min_chars = max(1, int(args.min_chars))
-    return _enforce_min_chunks_by_chars(chunks, min_chars=min_chars)
+    chunks = _enforce_min_span_chunks_by_chars(chunks, min_chars=min_chars)
+    return [c for c, _s, _e in chunks]
 
 
 def get_chunker_factory() -> Dict[str, ChunkerFn]:
@@ -511,6 +691,43 @@ def chunk_corpus_for_eval_with_spans(
                 merged.pop()
             chunks = [c for c, _s, _e in merged]
             spans = [(s, e) for _c, s, e in merged]
+        elif chunker == "sentence":
+            min_chars = max(1, int(args.min_chars))
+            max_chars = max(min_chars, int(args.max_chars))
+            overlap = max(0, int(getattr(args, "char_overlap", args.overlap)))
+            chunks_with_spans = sentence_chunk_with_spans(
+                text=joined,
+                min_chars=min_chars,
+                max_chars=max_chars,
+                overlap=overlap,
+            )
+            chunks = [c for c, _s, _e in chunks_with_spans]
+            spans = [(s, e) for _c, s, e in chunks_with_spans]
+        elif chunker == "recursive":
+            min_chars = max(1, int(args.min_chars))
+            overlap = max(0, int(getattr(args, "char_overlap", args.overlap)))
+            chunks_with_spans = recursive_chunk_with_spans(
+                text=joined,
+                min_chars=min_chars,
+                max_chars=args.max_chars,
+                overlap=overlap,
+            )
+            chunks = [c for c, _s, _e in chunks_with_spans]
+            spans = [(s, e) for _c, s, e in chunks_with_spans]
+        elif chunker == "semantic":
+            overlap = max(0, int(getattr(args, "char_overlap", args.overlap)))
+            chunks_with_spans = semantic_chunking_with_spans(
+                text=joined,
+                max_chars=args.max_chars,
+                overlap=overlap,
+                similarity_threshold=args.similarity_threshold,
+                embed_fn=sentence_embed_fn,
+                show_progress=False,
+            )
+            min_chars = max(1, int(args.min_chars))
+            chunks_with_spans = _enforce_min_span_chunks_by_chars(chunks_with_spans, min_chars=min_chars)
+            chunks = [c for c, _s, _e in chunks_with_spans]
+            spans = [(s, e) for _c, s, e in chunks_with_spans]
         else:
             chunks = chunk_text_for_eval(joined, chunker=chunker, args=args, sentence_embed_fn=sentence_embed_fn)
             spans = []

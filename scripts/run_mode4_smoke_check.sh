@@ -28,7 +28,7 @@ OLLAMA_NUM_PARALLEL=1 \
   --answer-provider ollama \
   --hotpot-answer-model llama \
   --retrievers sbert \
-  --chunkers token \
+  --chunkers sentence \
   --k 5 \
   --max-queries 10 \
   --output "${OUT_FILE}" \
