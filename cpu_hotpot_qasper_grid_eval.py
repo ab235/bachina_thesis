@@ -16,6 +16,18 @@ from run import (
     run_hierarchical_mode,
 )
 
+def _marker_safe_doc_id(did: str) -> str:
+    # Keep only tokenizer-safe chars so markers survive token chunking.
+    out = []
+    for ch in str(did):
+        if ch.isalnum() or ch == "_":
+            out.append(ch)
+        else:
+            out.append("_")
+    safe = "".join(out)
+    return safe or "doc"
+
+
 def _stitch_corpus(
     corpus: Dict[str, Dict[str, str]],
     hotpot_doc_sentences: Dict[str, List[str]],
@@ -33,10 +45,12 @@ def _stitch_corpus(
         if sents:
             # Mode-4 provenance tags for supporting-fact evaluation:
             # each sentence carries its original (doc, sentence_idx).
+            safe_did = _marker_safe_doc_id(did)
             for sent_idx, sent in enumerate(sents):
-                body_lines.append(f"[[HPDOC:{did}::S:{sent_idx}]] {sent}")
+                body_lines.append(f"HPDOC_{safe_did}_HPSENT_{sent_idx} {sent}")
         elif text:
-            body_lines.append(f"[[HPDOC:{did}::S:0]] {text}")
+            safe_did = _marker_safe_doc_id(did)
+            body_lines.append(f"HPDOC_{safe_did}_HPSENT_0 {text}")
         body = "\n".join(body_lines).strip()
         parts.append(f"{header}\n{body}" if doc_title else f"[doc={did}]\n{body}")
     stitched_text = "\n\n".join(parts).strip()

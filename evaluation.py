@@ -161,13 +161,26 @@ def _sentence_hit_indices(chunk_text: str, sentences: List[str], min_token_recal
 
 
 _HPDOC_SENT_TAG_RE = re.compile(r"\[\[HPDOC:(?P<did>.+?)::S:(?P<sent_idx>\d+)\]\]")
+_HPDOC_SENT_MARKER_RE = re.compile(r"\bHPDOC_(?P<did>[A-Za-z0-9_]+)_HPSENT_(?P<sent_idx>\d+)\b")
 
 
 def _extract_tagged_support_facts(chunk_text: str) -> Set[Tuple[str, int]]:
     out: Set[Tuple[str, int]] = set()
     if not chunk_text:
         return out
+    # Backward-compatible legacy bracket tags.
     for m in _HPDOC_SENT_TAG_RE.finditer(chunk_text):
+        did = str(m.group("did")).strip()
+        sent_idx_str = str(m.group("sent_idx")).strip()
+        if not did:
+            continue
+        try:
+            sent_idx = int(sent_idx_str)
+        except ValueError:
+            continue
+        out.add((did, sent_idx))
+    # Tokenizer-safe markers used by mode 4 stitching.
+    for m in _HPDOC_SENT_MARKER_RE.finditer(chunk_text):
         did = str(m.group("did")).strip()
         sent_idx_str = str(m.group("sent_idx")).strip()
         if not did:
