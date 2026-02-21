@@ -68,7 +68,9 @@ def _stitch_corpus(
     stitched_text = "".join(parts).strip()
     return {
         "stitched::fullwiki": {
-            "title": title,
+            # Keep title empty so join_doc(doc) == stitched text.
+            # This keeps _support_spans offsets aligned with chunk text.
+            "title": "",
             "text": stitched_text,
             "_support_spans": support_spans,
         }
